@@ -125,7 +125,7 @@ def main(argv: list[str] | None = None) -> int:
             print(f'\nDownload failed for: {url}', file=sys.stderr)
             print(f'Failure type: {result.failure_kind.value if result.failure_kind else "unknown"}', file=sys.stderr)
             print(failure_message(result.failure_kind), file=sys.stderr)
-            for hint in recovery_advice(result.failure_kind, result.output, request):
+            for hint in recovery_advice(result.failure_kind, result.output, request, cli=True):
                 print(f'Next: {hint["text"]}', file=sys.stderr)
             if request.fail_fast:
                 break

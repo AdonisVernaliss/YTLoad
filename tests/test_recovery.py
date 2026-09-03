@@ -58,3 +58,11 @@ class RecoveryTests(unittest.TestCase):
         from ytloadlib.recovery import recovery_advice
         advice = recovery_advice(FailureKind.FORMAT, 'ERROR: Requested format is not available', DownloadRequest())
         self.assertEqual({item['action'] for item in advice}, {'format'})
+
+    def test_cli_recovery_gives_command_options_instead_of_web_controls(self):
+        from ytloadlib.recovery import recovery_advice
+        advice = recovery_advice(FailureKind.RATE_LIMIT, 'ERROR: HTTP Error 429', DownloadRequest(mode='subs'), cli=True)
+        text = ' '.join(item['text'] for item in advice)
+        self.assertIn('--browser chrome', text)
+        self.assertIn('--sub-langs orig', text)
+        self.assertNotIn('Browser sign-in', text)

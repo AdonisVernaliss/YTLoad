@@ -4,7 +4,7 @@ from .models import DownloadRequest
 from .runner import FailureKind
 
 
-def recovery_advice(kind: FailureKind | None, output: str, request: DownloadRequest, *, hosted: bool = False) -> list[dict]:
+def recovery_advice(kind: FailureKind | None, output: str, request: DownloadRequest, *, hosted: bool = False, cli: bool = False) -> list[dict]:
     result = []
     def add(action, text):
         result.append({'action': action, 'text': text})
@@ -28,4 +28,14 @@ def recovery_advice(kind: FailureKind | None, output: str, request: DownloadRequ
         add('none' if hosted else 'setup', 'Check yt-dlp and Deno with doctor, then follow the setup guide. Update the tool used by this app before retrying.')
     if hosted and any(item['action'] == 'none' and 'installation' in item['text'] for item in result):
         add('none', 'Server dependencies must be updated by the operator. Installing tools on your phone does not change this public workspace.')
+    if cli:
+        options = {
+            'captions': 'Request one caption language with --sub-langs en, or try --sub-langs orig when a translation is not essential. Wait before retrying an HTTP 429 error.',
+            'format': 'Try --quality best --container auto to use the available source formats.',
+            'setup': 'Run YTLoad with doctor and check yt-dlp --list-impersonate-targets. See README.md, Connection recovery, before updating dependencies.',
+        }
+        if not request.browser:
+            options['browser'] = 'Open the source in Chrome and complete any sign-in or verification. Then repeat the command with --browser chrome; no cookies are enabled automatically.'
+        for item in result:
+            item['text'] = options.get(item['action'], item['text'])
     return result
