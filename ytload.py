@@ -8,6 +8,7 @@ from ytloadlib import __version__
 from ytloadlib.cli import parse_args, request_from_args
 from ytloadlib.config import load_config
 from ytloadlib.environment import detect_environment
+from ytloadlib.recovery import recovery_advice
 from ytloadlib.runner import failure_message, printable_command, run_download
 from ytloadlib.ui import interactive_request
 from ytloadlib.urls import expand_channel_url
@@ -124,6 +125,8 @@ def main(argv: list[str] | None = None) -> int:
             print(f'\nDownload failed for: {url}', file=sys.stderr)
             print(f'Failure type: {result.failure_kind.value if result.failure_kind else "unknown"}', file=sys.stderr)
             print(failure_message(result.failure_kind), file=sys.stderr)
+            for hint in recovery_advice(result.failure_kind, result.output, request):
+                print(f'Next: {hint["text"]}', file=sys.stderr)
             if request.fail_fast:
                 break
         else:

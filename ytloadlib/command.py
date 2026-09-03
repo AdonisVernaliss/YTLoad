@@ -94,6 +94,10 @@ def build_command(request: DownloadRequest, url: str, config: AppConfig,
     subtitle_policy = request.subtitles
     if (request.mode == 'subs' or request.transcript_formats) and subtitle_policy == 'none':
         subtitle_policy = 'both'
+    if info.kind != 'generic':
+        cmd.extend(['--sleep-requests', '0.75'])
+        if subtitle_policy != 'none':
+            cmd.extend(['--sleep-subtitles', '5'])
     if subtitle_policy != 'none':
         if subtitle_policy in {'authored', 'both'}:
             cmd.append('--write-subs')

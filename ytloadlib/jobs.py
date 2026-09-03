@@ -8,14 +8,16 @@ import time
 import uuid
 
 from .models import AppConfig
+from .recovery import recovery_advice
 from .runner import failure_detail, failure_message, run_download
 from .urls import expand_channel_url
 from .validation import request_from_payload
 
 
 class JobManager:
-    def __init__(self, config: AppConfig, prepare_request=None, check_file=None):
+    def __init__(self, config: AppConfig, prepare_request=None, check_file=None, hosted=False):
         self.config = config
+        self.hosted = hosted
         self.prepare_request = prepare_request
         self.check_file = check_file
         self._jobs = {}
@@ -50,7 +52,7 @@ class JobManager:
                 self._jobs[identifier] = {
                     'id': identifier, 'url': url, 'title': url, 'mode': request.mode, 'status': 'queued',
                     'created': time.time(), 'output_root': str(root), 'progress': {}, 'logs': deque(maxlen=150),
-                    'files': [], 'warnings': [], 'error': None, 'error_detail': None,
+                    'files': [], 'warnings': [], 'error': None, 'error_detail': None, 'recovery': [],
                     'request': replace(request, urls=[url], output_root=str(root)),
                     'cancel': threading.Event(),
                 }
@@ -61,7 +63,7 @@ class JobManager:
 
     def snapshot(self) -> list[dict]:
         with self._condition:
-            return [{key: list(value) if key in {'logs', 'files', 'warnings'} else dict(value) if key == 'progress' else value
+            return [{key: [dict(item) for item in value] if key == 'recovery' else list(value) if key in {'logs', 'files', 'warnings'} else dict(value) if key == 'progress' else value
                      for key, value in job.items() if key not in {'request', 'cancel'}} for job in self._jobs.values()]
 
     def cancel(self, identifier: str) -> None:
@@ -145,6 +147,7 @@ class JobManager:
                     job['error'] = failure_message(result.failure_kind) if not result.success else None
                     job['error_detail'] = failure_detail(result.output) if not result.success else None
                     job['warnings'] = list(result.warnings)
+                    job['recovery'] = recovery_advice(result.failure_kind, result.output, job['request'], hosted=self.hosted)
                     job['files'] = list(dict.fromkeys([*job['files'], *result_files]))
                     if not result.success and result.output:
                         job['logs'].append(result.output[-6000:])

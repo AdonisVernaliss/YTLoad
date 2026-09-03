@@ -113,7 +113,7 @@ Keep the terminal open while downloads run. Press **Ctrl+C** to stop the app and
 1. **Paste links.** Add one or more video, playlist or channel URLs, or import a `.txt` file. **Check link** previews the first link's title, available quality and caption languages.
 2. **Choose what to keep.** Select Video, Audio, Transcript or Details. Add transcripts to a video/audio download if needed.
 3. **Choose quality, format and destination.** The summary shows your current selection. **More control** contains playlist filters, speed limits and optional extra files.
-4. **Add to downloads.** Follow progress, cancel an active item, or retry a failed or cancelled item. Completed files appear as download links.
+4. **Add to downloads.** Follow progress, cancel an active item, or retry a failed or cancelled item. Completed files appear as download links. Submitted links stay in the input; use **Clear links** to remove them.
 
 | Mode | Result |
 | --- | --- |
@@ -123,6 +123,8 @@ Keep the terminal open while downloads run. Press **Ctrl+C** to stop the app and
 | **Details** | Metadata JSON, with optional thumbnail, description or comments |
 
 Shared YouTube links are normalized automatically: Shorts and short links become standard video URLs, tracking parameters such as `si` are removed, and duplicate links are merged. Markdown links are accepted too. Links to other sites keep their query parameters.
+
+After a failure, **Suggested next steps** explains which setting may help. **Retry same settings** repeats the original request. **Retry with current settings** uses the form above for that one link, including a newly selected browser, without changing the links in the input.
 
 Downloads run one at a time. A file can reach 100% before merging, conversion or transcript export finishes; wait for the item to show **Saved**.
 
@@ -352,6 +354,47 @@ python3 ytload.py "VIDEO_URL" --browser chrome --user-agent "YOUR_COMPLETE_BROWS
 Leave User-Agent blank normally. A fixed or randomly rotated browser string is not a universal HTTP 403 fix. Cookies, source restrictions, JavaScript challenges, IP address and request limits can also matter; see the [upstream FAQ](https://github.com/yt-dlp/yt-dlp/wiki/FAQ). The Safari client is an optional compatibility path, not a guarantee of access.
 
 A website cannot read a visitor's local Chrome session through this option. It selects a browser on the backend computer. Hosted deployments must not expose the operator's browser session to public users.
+
+## Connection recovery
+
+User-Agent, browser cookies and browser impersonation solve different problems. The wrapper supports explicit User-Agent and `default,web_safari` settings; neither guarantees access or removes a source's rate limit.
+
+- **HTTP 429:** pause instead of repeatedly retrying. Open the source in your usual browser and complete any sign-in or verification it requests. In local YTLoad, select that browser under **More control → Browser sign-in**, then choose **Retry with current settings** on the failed item. Automatic retries do not switch on browser access.
+- **Caption 429:** request one language. Even one track can be blocked; **Original** can help avoid translated caption requests when you do not need a specific language. YTLoad adds a five-second pause before each YouTube caption download and spaces extraction requests. These pauses reduce request bursts; they do not clear an existing block.
+- **Chrome password prompt on macOS:** this may be the operating system unlocking Chrome's encrypted cookies in Keychain. YTLoad cannot skip that protection and never asks for or stores the password. After you select Chrome, the form keeps that choice for the current page. Connection choices are not saved in browser storage.
+- **No impersonate target available:** the running yt-dlp installation lacks an optional browser impersonation dependency. This warning is separate from the final download error. Inspect support with `yt-dlp --list-impersonate-targets`; unavailable rows mean the dependency is absent.
+
+For a pip-managed installation, update the same environment that supplies the `yt-dlp` command:
+
+```bash
+python3 -m pip install --upgrade "yt-dlp[default,curl-cffi]"
+```
+
+Do not install pip packages into Homebrew's internal yt-dlp environment. To use optional impersonation support, create a separate environment in the source folder, activate it, and launch YTLoad from that terminal:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade "yt-dlp[default,curl-cffi]"
+yt-dlp --list-impersonate-targets
+python ytload.py --ui
+```
+
+On Windows, the equivalent PowerShell commands avoid activation-script policy changes:
+
+```powershell
+py -3 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install --upgrade "yt-dlp[default,curl-cffi]"
+$env:PATH = "$PWD\.venv\Scripts;$env:PATH"
+yt-dlp --list-impersonate-targets
+.\.venv\Scripts\python.exe ytload.py --ui
+```
+
+For the portable application, replace `ytload.py` with `ytload.pyz`. FFmpeg and a supported JavaScript runtime such as Deno must still be installed separately. Stop the old workspace before relaunching. The environment must be active in the terminal that starts YTLoad so the child `yt-dlp` process uses it.
+
+The error panel includes **Tool setup help** with copyable commands. A failed request does not automatically install software, overwrite a managed runtime, read another browser's cookies or discard selected captions. In public mode, browser sessions remain unavailable and only the operator can update server dependencies.
+
+See the upstream [rate-limit guidance](https://github.com/yt-dlp/yt-dlp/wiki/FAQ#http-error-429-too-many-requests-or-402-payment-required) and [impersonation dependencies](https://github.com/yt-dlp/yt-dlp#impersonation).
 
 ## Configuration and privacy
 

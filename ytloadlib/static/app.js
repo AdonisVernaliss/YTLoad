@@ -131,10 +131,9 @@ function updateSummary() {
   document.querySelector('.mobile-submit').disabled = !ready || submitting;
 }
 
-function payload() {
+function payload(list = urls()) {
   const mode = selectedMode();
   const includeText = hasTranscript();
-  const list = urls();
   if (!list.length || list.length > 100) throw new Error('Add between 1 and 100 links per batch.');
   for (const value of list) {
     let parsed;
@@ -189,6 +188,13 @@ $('download-form').addEventListener('input', () => {
 });
 $('download-form').addEventListener('change', updateSummary);
 $('urls').addEventListener('input', () => { $('preview').hidden = true; });
+$('clear-links').addEventListener('click', () => {
+  $('urls').value = '';
+  $('preview').hidden = true;
+  updateSummary();
+  translatePage();
+  $('urls').focus();
+});
 
 $('download-form').addEventListener('submit', async (event) => {
   event.preventDefault();
@@ -199,7 +205,6 @@ $('download-form').addEventListener('submit', async (event) => {
     submitting = true;
     updateSummary();
     const result = await api('/api/jobs', request);
-    $('urls').value = '';
     $('preview').hidden = true;
     toast(`${result.ids.length} ${result.ids.length === 1 ? 'download' : 'downloads'} added. Your files will save automatically.`);
     await refreshJobs();
@@ -269,12 +274,105 @@ $('open-folder').addEventListener('click', async () => {
 
 for (const id of ['help-button', 'footer-help']) $(id).addEventListener('click', () => $('help-dialog').showModal());
 for (const id of ['close-help', 'help-done']) $(id).addEventListener('click', () => $('help-dialog').close());
+for (const id of ['close-setup', 'setup-done']) $(id).addEventListener('click', () => $('setup-dialog').close());
+$('copy-setup-command').addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText($('setup-command').textContent);
+    toast('Setup commands copied.');
+  } catch { toast('Select and copy the commands manually.'); }
+});
 $('help-dialog').addEventListener('click', (event) => { if (event.target === $('help-dialog')) { const rect = $('help-dialog').getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) $('help-dialog').close(); } });
+
+function reviewSetting(action) {
+  if (action === 'setup') {
+    $('setup-dialog').showModal();
+    return;
+  }
+  let target;
+  if (action === 'browser') {
+    target = $('browser');
+    target.closest('details').open = true;
+  } else if (action === 'captions') {
+    if (selectedMode() === 'metadata') document.querySelector('input[name="mode"][value="subs"]').checked = true;
+    $('with-transcript').checked = true;
+    target = $('sub-langs');
+  } else if (action === 'format') {
+    $('quality').value = 'best';
+    $('container').value = 'auto';
+    target = $('quality');
+  }
+  updateSummary();
+  translatePage();
+  if (target) {
+    target.scrollIntoView({behavior: 'smooth', block: 'center'});
+    target.focus({preventScroll: true});
+  }
+}
+
+function renderRecovery(job, node) {
+  const panel = node.querySelector('.job-recovery');
+  const retryable = ['failed', 'cancelled'].includes(job.status);
+  const advice = job.recovery || [];
+  panel.hidden = !retryable && !advice.length;
+  panel.replaceChildren();
+  if (panel.hidden) return;
+  const heading = document.createElement('h4');
+  heading.textContent = 'Suggested next steps';
+  panel.append(heading);
+  const actions = new Set();
+  if (advice.length) {
+    const list = document.createElement('ul');
+    for (const item of advice) {
+      const entry = document.createElement('li');
+      entry.textContent = item.text;
+      list.append(entry);
+      if (item.action !== 'none' && !(hosted && ['browser', 'setup'].includes(item.action))) actions.add(item.action);
+    }
+    panel.append(list);
+  }
+  const controls = document.createElement('div');
+  controls.className = 'recovery-actions';
+  const labels = {browser: 'Review browser sign-in', captions: 'Choose caption language', setup: 'Tool setup help', format: 'Use Best + Auto'};
+  for (const action of actions) {
+    if (!Object.hasOwn(labels, action)) continue;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'secondary';
+    button.textContent = labels[action];
+    button.addEventListener('click', () => reviewSetting(action));
+    controls.append(button);
+  }
+  if (retryable) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'secondary';
+    button.textContent = 'Retry with current settings';
+    button.addEventListener('click', async () => {
+      button.disabled = true;
+      try {
+        const request = payload([job.url]);
+        request.channel_scope = 'auto';
+        await api('/api/jobs', request);
+        toast('Retry added using the settings above. Your links are unchanged.');
+        await refreshJobs();
+      } catch (error) { toast(error.message); }
+      finally { button.disabled = false; }
+    });
+    controls.append(button);
+  }
+  panel.append(controls);
+  if (retryable) {
+    const note = document.createElement('p');
+    note.className = 'field-note';
+    note.textContent = 'Retry with current settings uses the form above for this link only. Retry same settings repeats the original request.';
+    panel.append(note);
+  }
+}
 
 function createJob(job) {
   const node = document.createElement('article');
   node.className = 'job';
-  node.innerHTML = '<div class="job-head"><span class="job-icon" aria-hidden="true"></span><div class="job-text"><h3 class="job-title"></h3><span class="job-url"></span></div><div class="job-actions"><span class="job-status"></span><button class="job-button" type="button"></button></div></div><progress class="job-progress" max="100" aria-label="Current file progress"></progress><div class="job-progress-text"><span></span><span></span></div><p class="job-error" hidden><span class="job-error-message"></span><small class="job-error-detail"></small></p><div class="job-warnings" hidden></div><div class="job-files"></div><details class="job-log"><summary>Activity log</summary><pre></pre></details>';
+  node.innerHTML = '<div class="job-head"><span class="job-icon" aria-hidden="true"></span><div class="job-text"><h3 class="job-title"></h3><span class="job-url"></span></div><div class="job-actions"><span class="job-status"></span><button class="job-button" type="button"></button></div></div><progress class="job-progress" max="100" aria-label="Current file progress"></progress><div class="job-progress-text"><span></span><span></span></div><p class="job-error" hidden><span class="job-error-message"></span><small class="job-error-detail"></small></p><div class="job-warnings" hidden></div><div class="job-files"></div><section class="job-recovery" aria-label="Download recovery" hidden></section><details class="job-log"><summary>Activity log</summary><pre></pre></details>';
   node.querySelector('.job-button').addEventListener('click', async () => {
     const button = node.querySelector('.job-button');
     button.disabled = true;
@@ -301,7 +399,7 @@ function renderJob(job, entry) {
   node.querySelector('.job-status').textContent = { queued: 'Queued', running: 'Downloading', cancelling: 'Stopping…', completed: job.files.length ? 'Saved' : 'Finished', failed: 'Needs attention', cancelled: 'Cancelled' }[job.status];
   const button = node.querySelector('.job-button');
   button.hidden = ['completed', 'cancelling'].includes(job.status);
-  button.textContent = ['queued', 'running'].includes(job.status) ? 'Cancel' : 'Retry';
+  button.textContent = ['queued', 'running'].includes(job.status) ? 'Cancel' : 'Retry same settings';
   button.setAttribute('aria-label', `${button.textContent} ${job.title}`);
   const progress = node.querySelector('.job-progress');
   const total = job.progress.total;
@@ -324,6 +422,7 @@ function renderJob(job, entry) {
   node.querySelector('.job-error').hidden = !job.error || job.status === 'cancelled';
   node.querySelector('.job-error-message').textContent = job.error || '';
   node.querySelector('.job-error-detail').textContent = job.error_detail || '';
+  renderRecovery(job, node);
   node.querySelector('.job-warnings').hidden = !job.warnings.length;
   node.querySelector('.job-warnings').textContent = job.warnings.join('\n');
   node.querySelector('.job-log pre').textContent = job.logs.join('\n') || 'No activity yet.';

@@ -19,7 +19,7 @@ from .validation import request_from_payload, validate_url
 
 
 PUBLIC_ARGS = ['--use-extractors', 'youtube.*', '--match-filters', '!is_live',
-               '--sleep-requests', '0.5', '--sleep-interval', '1', '--max-sleep-interval', '3', '--sleep-subtitles', '2']
+               '--sleep-interval', '1', '--max-sleep-interval', '3']
 ACTIVE = {'queued', 'running', 'cancelling'}
 FILE_BYTES = 256 * 1024 ** 2
 SESSION_TTL = 3600
@@ -117,7 +117,7 @@ class PublicState:
         self.creations = {}
         self.salt = secrets.token_bytes(32)
         self.reasons = {}
-        self.jobs = JobManager(AppConfig(output_root=str(self.root)), prepare_request=protect_command, check_file=check_public_file)
+        self.jobs = JobManager(AppConfig(output_root=str(self.root)), prepare_request=protect_command, check_file=check_public_file, hosted=True)
         self.closed = threading.Event()
         self.monitor = threading.Thread(target=self._monitor, daemon=True, name='temporary-storage')
         self.monitor.start()
