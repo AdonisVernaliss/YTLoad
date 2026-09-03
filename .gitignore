@@ -89,3 +89,4 @@ secrets*
 
 public-storage/
 .ytload-public
+*.local.csv

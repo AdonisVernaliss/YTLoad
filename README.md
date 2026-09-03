@@ -517,6 +517,12 @@ Tests cover request validation, command construction, caption conversion, proces
 | `tests/` | Python and JavaScript checks |
 | `build.py` | Reproducible portable archive builder |
 
+### Experimental direct-browser probe
+
+A separate development-only resolver tests Source → Browser access after yt-dlp resolution on another IP. It does not change the normal downloader or proxy media. Run `python3 -m ytloadlib.direct_probe` from the checkout on macOS/Linux, or inside WSL2 on Windows. Keep its connection link private.
+
+See the [setup and cross-IP test procedure](docs/client-direct-probe.md), [24-case corpus worksheet](docs/client-direct-corpus.csv), and [measured results and limitations](docs/client-direct-results.md). Four same-IP and cross-IP rates are reported separately; no real cross-IP rate has been established yet.
+
 ### Portable build
 
 ```bash

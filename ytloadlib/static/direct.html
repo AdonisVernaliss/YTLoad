@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <title>YTLoad · Client-direct experiment</title>
+  <link rel="stylesheet" href="/direct.css">
+  <script type="module" src="/direct-page.mjs"></script>
+</head>
+<body>
+  <main>
+    <header><span class="eyebrow">YTLoad / Development only</span><h1>Source → browser.</h1><p>Measure native downloads and direct stream readability when the resolver and browser use different public networks.</p></header>
+    <section aria-labelledby="setup-title">
+      <h2 id="setup-title">Test conditions</h2>
+      <p class="muted">Keep this page private. Signed source URLs can contain the resolver's public IP and temporary tokens. They stay in browser memory and are excluded from reports.</p>
+      <div class="fields">
+        <label>Connection key<input id="key" type="password" autocomplete="off" spellcheck="false"></label>
+        <label>Browser<select id="browser"><option value="unknown">Choose actual browser</option><option value="desktop-chrome">Chrome · desktop</option><option value="desktop-safari">Safari · desktop</option><option value="desktop-firefox">Firefox · desktop</option><option value="android-chrome">Chrome · Android</option><option value="iphone-safari">Safari · iPhone</option><option value="embedded-chromium">Embedded Chromium · control only</option></select></label>
+        <label>Browser version<input id="browser-version" placeholder="Version number" inputmode="decimal" maxlength="24"></label>
+        <label>OS / device<select id="os-device"><option value="unknown">Choose OS / device</option><option value="macos">macOS</option><option value="windows">Windows</option><option value="linux">Linux</option><option value="iphone">iPhone</option><option value="android">Android</option></select></label>
+        <label>Browser connection<select id="network"><option value="unknown">Choose connection</option><option value="wifi">Wi-Fi</option><option value="mobile">Mobile data</option><option value="ethernet">Ethernet</option></select></label>
+        <label>Resolver vs browser egress<select id="network-relation"><option value="unknown">Not verified</option><option value="same-ip">Same public IP · control</option><option value="different-ip">Different public IPs · primary</option></select></label>
+        <label class="check"><input id="ip-verified" type="checkbox">I checked egress on both devices and the browser does not exit through the resolver's VPN.</label>
+      </div>
+    </section>
+    <form id="resolve-form">
+      <h2>Resolve one corpus case</h2>
+      <label>YouTube video or Short<input id="url" type="url" required placeholder="https://www.youtube.com/watch?v=…" autocomplete="off" spellcheck="false"></label>
+      <div class="fields">
+        <label>Corpus case number<input id="case-number" type="number" min="1" max="999" value="1" required></label>
+        <label>Source type<select id="corpus-type"><option value="standard">Standard video</option><option value="short">Short</option><option value="short-video">Short regular video</option><option value="music">Music</option><option value="long">Long video</option><option value="high-resolution">High resolution</option></select></label>
+        <label>Player client<select id="youtube-client"><option value="default">Default</option><option value="web_safari">Default + Safari</option></select></label>
+      </div>
+      <p class="muted">Reuse one case number for the same source on every device. Resolution uses this browser's User-Agent without cookies. Refresh after switching networks.</p>
+      <div class="actions"><button type="submit" id="resolve">Resolve formats</button><button type="button" id="cancel" disabled>Cancel browser test</button></div>
+      <p id="status" role="status" aria-live="polite">Ready. Add one permitted public source.</p>
+    </form>
+    <section aria-labelledby="results-title">
+      <h2 id="results-title">Format evidence</h2>
+      <p class="muted">The first and offset Range probes each request 64 KiB. A readable sample is not a complete download. Separate video and audio are never merged by this experiment.</p>
+      <div id="results"><p>No formats resolved yet.</p></div>
+    </section>
+    <section aria-labelledby="report-title">
+      <h2 id="report-title">Measured rates</h2>
+      <div class="table-wrap"><table><thead><tr><th>Network relation</th><th>Resolver</th><th>Progressive native download</th><th>Progressive Fetch</th><th>DASH pair Fetch</th></tr></thead><tbody id="metrics"></tbody></table></div>
+      <p id="summary">No eligible evidence yet.</p>
+      <p class="muted">Rates use confirmed target browsers. Download and Fetch rates include only finalized resolved cases. Export before closing or clearing this page.</p>
+      <div class="actions"><button id="export" type="button">Export sanitized report</button><button id="clear" type="button">Clear results</button></div>
+      <details><summary>Preview sanitized JSON</summary><pre id="report-preview">No evidence recorded.</pre></details>
+    </section>
+  </main>
+</body>
+</html>

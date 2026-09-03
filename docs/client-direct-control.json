@@ -1,0 +1,231 @@
+{
+  "schema_version": 1,
+  "experiment": "client-direct",
+  "runs": [
+    {
+      "resolution_id": "c8b44833365f4d5faf5d8b90b7cfa6d1",
+      "case_id": "case-001",
+      "trial": 1,
+      "resolved_at": 1788436712,
+      "resolution_ok": true,
+      "resolution_ms": 2587,
+      "youtube_client": "default",
+      "browser": "embedded-chromium",
+      "browser_version": "unknown",
+      "network": "unknown",
+      "network_relation": "unknown",
+      "ip_verification": "not-verified",
+      "corpus_type": "short",
+      "formats": [
+        {
+          "role": "progressive",
+          "available": true,
+          "format_id": "18",
+          "protocol": "https",
+          "container": "mp4",
+          "vcodec": "avc1.42001E",
+          "acodec": "mp4a.40.2",
+          "height": 640,
+          "width": 360,
+          "fps": 30,
+          "filesize": 5596633,
+          "filesize_approx": 5596628,
+          "requires_private_headers": false,
+          "ip_binding_hint": true,
+          "po_token_hint": false,
+          "result": {
+            "classification": "unknown failure",
+            "reason": "fetch-rejected",
+            "http_status": null,
+            "bytes_read": 0,
+            "complete": false,
+            "scope": "sample",
+            "request_mode": "plain",
+            "elapsed_ms": 20,
+            "tested_at": 1788436880
+          },
+          "tests": [
+            {
+              "classification": "unknown failure",
+              "reason": "fetch-rejected",
+              "http_status": null,
+              "bytes_read": 0,
+              "complete": false,
+              "scope": "sample",
+              "request_mode": "range",
+              "elapsed_ms": 57,
+              "tested_at": 1788436731
+            },
+            {
+              "classification": "unknown failure",
+              "reason": "fetch-rejected",
+              "http_status": null,
+              "bytes_read": 0,
+              "complete": false,
+              "scope": "sample",
+              "request_mode": "plain",
+              "elapsed_ms": 20,
+              "tested_at": 1788436880
+            }
+          ],
+          "native_attempts": [
+            {
+              "tested_at": 1788436897,
+              "outcome": "pending",
+              "saved": false,
+              "playback": false
+            }
+          ]
+        },
+        {
+          "role": "best-video",
+          "available": true,
+          "format_id": "616",
+          "protocol": "m3u8_native",
+          "container": "mp4",
+          "vcodec": "vp09.00.40.08",
+          "acodec": "none",
+          "height": 1920,
+          "width": 1080,
+          "fps": 30,
+          "filesize": null,
+          "filesize_approx": null,
+          "requires_private_headers": false,
+          "ip_binding_hint": false,
+          "po_token_hint": false,
+          "result": {
+            "classification": "unsupported protocol",
+            "reason": "manifest-or-segmented-stream",
+            "http_status": null,
+            "bytes_read": 0,
+            "complete": false,
+            "scope": "sample",
+            "request_mode": "range",
+            "elapsed_ms": 0,
+            "tested_at": 1788436740
+          },
+          "tests": [
+            {
+              "classification": "unsupported protocol",
+              "reason": "manifest-or-segmented-stream",
+              "http_status": null,
+              "bytes_read": 0,
+              "complete": false,
+              "scope": "sample",
+              "request_mode": "range",
+              "elapsed_ms": 0,
+              "tested_at": 1788436740
+            }
+          ],
+          "native_attempts": []
+        },
+        {
+          "role": "best-audio",
+          "available": true,
+          "format_id": "251-1",
+          "protocol": "https",
+          "container": "webm",
+          "vcodec": "none",
+          "acodec": "opus",
+          "height": null,
+          "width": null,
+          "fps": null,
+          "filesize": 979818,
+          "filesize_approx": 979808,
+          "requires_private_headers": false,
+          "ip_binding_hint": true,
+          "po_token_hint": false,
+          "result": {
+            "classification": "unknown failure",
+            "reason": "fetch-rejected",
+            "http_status": null,
+            "bytes_read": 0,
+            "complete": false,
+            "scope": "sample",
+            "request_mode": "plain",
+            "elapsed_ms": 130,
+            "tested_at": 1788436880
+          },
+          "tests": [
+            {
+              "classification": "unknown failure",
+              "reason": "fetch-rejected",
+              "http_status": null,
+              "bytes_read": 0,
+              "complete": false,
+              "scope": "sample",
+              "request_mode": "range",
+              "elapsed_ms": 45,
+              "tested_at": 1788436740
+            },
+            {
+              "classification": "unknown failure",
+              "reason": "fetch-rejected",
+              "http_status": null,
+              "bytes_read": 0,
+              "complete": false,
+              "scope": "sample",
+              "request_mode": "plain",
+              "elapsed_ms": 130,
+              "tested_at": 1788436880
+            }
+          ],
+          "native_attempts": []
+        },
+        {
+          "role": "https-video",
+          "available": true,
+          "format_id": "399",
+          "protocol": "https",
+          "container": "mp4",
+          "vcodec": "av01.0.08M.08",
+          "acodec": "none",
+          "height": 1920,
+          "width": 1080,
+          "fps": 30,
+          "filesize": 3134348,
+          "filesize_approx": 3134339,
+          "requires_private_headers": false,
+          "ip_binding_hint": true,
+          "po_token_hint": false,
+          "result": {
+            "classification": "unknown failure",
+            "reason": "fetch-rejected",
+            "http_status": null,
+            "bytes_read": 0,
+            "complete": false,
+            "scope": "sample",
+            "request_mode": "plain",
+            "elapsed_ms": 47,
+            "tested_at": 1788436880
+          },
+          "tests": [
+            {
+              "classification": "unknown failure",
+              "reason": "fetch-rejected",
+              "http_status": null,
+              "bytes_read": 0,
+              "complete": false,
+              "scope": "sample",
+              "request_mode": "range",
+              "elapsed_ms": 26,
+              "tested_at": 1788436750
+            },
+            {
+              "classification": "unknown failure",
+              "reason": "fetch-rejected",
+              "http_status": null,
+              "bytes_read": 0,
+              "complete": false,
+              "scope": "sample",
+              "request_mode": "plain",
+              "elapsed_ms": 47,
+              "tested_at": 1788436880
+            }
+          ],
+          "native_attempts": []
+        }
+      ]
+    }
+  ]
+}
