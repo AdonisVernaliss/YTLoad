@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="workspace-base" content="__WORKSPACE_BASE__">
+  <meta name="workspace-token" content="__WORKSPACE_TOKEN__">
+  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#171b17">
+  <script src="/appearance.js"></script>
+  <title>YTLoad — Your local workspace</title>
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <a class="skip" href="#download-form">Skip to download settings</a>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="YTLoad home"><span class="brand-mark" aria-hidden="true">↓</span><span>YTLoad<span class="brand-sub">MEDIA WORKSPACE</span></span></a>
+    <nav aria-label="Workspace navigation"><a class="nav-current" href="#download-form">Workspace</a><a href="#queue-section">Downloads <span id="nav-count">0</span></a><button class="text-button" id="help-button" type="button">Quick guide <span aria-hidden="true">↗</span></button></nav>
+    <div class="appearance-controls"><div class="language-switcher" role="group" aria-label="Language"><button type="button" data-language="en" aria-pressed="true">EN</button><button type="button" data-language="de" aria-pressed="false">DE</button><button type="button" data-language="ru" aria-pressed="false">RU</button></div><button type="button" id="theme-toggle" aria-label="Switch to light theme" title="Switch to light theme"><span aria-hidden="true">☼</span></button></div>
+  </header>
+  <main>
+    <section class="intro" aria-labelledby="page-title"><div><p class="eyebrow">YTLOAD / MEDIA</p><h1 id="page-title">A good link is worth keeping.</h1><p class="intro-copy">Save the video, keep the audio, or take the words with you.</p></div><div class="local-note"><span class="local-icon" aria-hidden="true">↙</span><span>Saved to your computer.<br><strong>Right where you want it.</strong></span></div></section>
+    <div id="setup-warning" class="notice" role="status" hidden></div>
+    <div class="workspace-grid">
+      <form id="download-form" class="download-form">
+        <section class="card source-card" aria-labelledby="source-title">
+          <div class="section-heading"><span class="step">01</span><h2 id="source-title">Start with a link</h2><span class="section-hint">ONE OR MANY</span></div>
+          <label class="sr-only" for="urls">Video, playlist or channel links</label>
+          <div class="url-box"><textarea id="urls" name="urls" rows="3" placeholder="Paste one or more links…&#10;One link per line." spellcheck="false" required></textarea><button id="paste-button" type="button" class="paste-button" aria-label="Paste links from clipboard">Paste <span aria-hidden="true">↙</span></button></div>
+          <div class="source-footer"><span id="link-count">YouTube &amp; other supported sites</span><div><input id="import-file" type="file" accept=".txt,text/plain" hidden><button id="import-button" type="button" class="text-button">Import .txt</button><span class="separator">/</span><button id="inspect-button" type="button" class="text-button" disabled>Check link <span aria-hidden="true">→</span></button></div></div>
+          <div id="preview" class="preview" aria-live="polite" hidden></div>
+        </section>
+        <section class="card" aria-labelledby="format-title">
+          <div class="section-heading"><span class="step">02</span><h2 id="format-title">Choose what to keep</h2></div>
+          <fieldset class="mode-grid"><legend class="sr-only">Download type</legend>
+            <label class="mode"><input type="radio" name="mode" value="video" checked><span class="mode-icon" aria-hidden="true">▷</span><strong>Video</strong><small>Picture + sound</small><span class="radio-dot"></span></label>
+            <label class="mode"><input type="radio" name="mode" value="audio"><span class="mode-icon music-icon" aria-hidden="true">♫</span><strong>Audio</strong><small>Just the sound</small><span class="radio-dot"></span></label>
+            <label class="mode"><input type="radio" name="mode" value="subs"><span class="mode-icon text-icon" aria-hidden="true">T<span>t</span></span><strong>Transcript</strong><small>Words &amp; captions</small><span class="radio-dot"></span></label>
+            <label class="mode"><input type="radio" name="mode" value="metadata"><span class="mode-icon info-icon" aria-hidden="true">ⓘ</span><strong>Details</strong><small>Video information</small><span class="radio-dot"></span></label>
+          </fieldset>
+          <div id="video-options" class="two-columns options-row">
+            <label>Video quality<select id="quality"><option value="best">Best available</option><option value="2160p">Up to 4K · 2160p</option><option value="1440p">Up to 2K · 1440p</option><option value="1080p">Up to Full HD · 1080p</option><option value="720p">Up to HD · 720p</option><option value="480p">Up to SD · 480p</option><option value="small">Small file · up to 720p</option><option value="compatible">Most compatible · H.264</option></select><small>Uses the best source within this limit.</small></label>
+            <label>Video format<select id="container"><option value="auto">Auto · keep source quality</option><option value="mp4">MP4 · widest compatibility</option><option value="mkv">MKV · flexible container</option></select><small id="container-help">Keeps original codecs. Merged video uses MKV.</small></label>
+          </div>
+          <div id="audio-options" class="options-row" hidden><label>Audio format<select id="audio-format"><option value="best">Original · no conversion</option><option value="mp3">MP3 · works almost everywhere</option><option value="m4a">M4A · compact and compatible</option><option value="opus">Opus · efficient compression</option><option value="wav">WAV · uncompressed</option><option value="flac">FLAC · lossless container</option></select><small>WAV and FLAC produce larger files; they cannot restore quality missing from the source.</small></label></div>
+          <p id="metadata-hint" class="muted options-row" hidden>Saves a JSON file with the title, channel, dates and available video details. No video or audio is downloaded.</p>
+          <div class="transcript-area" id="transcript-area">
+            <label class="toggle-row" id="transcript-toggle-row"><span><strong>Add a transcript</strong><small>Keep a readable copy alongside your media.</small></span><input type="checkbox" id="with-transcript" role="switch"><span class="switch" aria-hidden="true"></span></label>
+            <div id="transcript-options" hidden>
+              <p id="transcript-only-hint" class="muted" hidden>Export existing subtitles as readable text or timed captions. No media download.</p>
+              <div class="two-columns options-row"><label>Language<select id="sub-langs"><option value="default">Default track · English if available</option><option value="en.*">English</option><option value="ru.*">Russian</option><option value="de.*">German</option><option value="es.*">Spanish</option><option value="fr.*">French</option><option value="orig">Original automatic track</option><option value="all">All available languages</option><option value="custom">Custom language codes…</option></select></label><label>Caption source<select id="subtitles"><option value="both">Prefer creator captions, otherwise automatic</option><option value="authored">Creator captions only</option><option value="auto">Automatic captions only</option></select></label></div>
+              <label id="custom-language-row" class="options-row" hidden>Language codes<input id="custom-language" placeholder="en.*,ru-orig" spellcheck="false"><small>Comma-separated codes or patterns. Check the link to see available tracks.</small></label>
+              <fieldset class="export-formats"><legend>Export as <span class="muted">Select one or more</span></legend><label><input type="checkbox" name="transcript-format" value="txt" checked><span>TXT<small>Readable text</small></span></label><label><input type="checkbox" name="transcript-format" value="srt"><span>SRT<small>For video editors</small></span></label><label><input type="checkbox" name="transcript-format" value="vtt"><span>VTT<small>Web captions</small></span></label><label><input type="checkbox" name="transcript-format" value="json"><span>JSON<small>Structured data</small></span></label></fieldset>
+              <div class="check-row"><label><input id="timestamps" type="checkbox">Timestamps in TXT</label><label id="embed-row"><input id="embed-subs" type="checkbox">Also embed captions in video</label></div>
+              <p class="field-note">Captions must exist on the source. Automatic captions may contain mistakes. Original subtitle files are kept too.</p>
+            </div>
+          </div>
+        </section>
+        <section class="card destination-card" aria-labelledby="destination-title">
+          <div class="section-heading"><span class="step">03</span><h2 id="destination-title">Give it a home</h2></div>
+          <label for="output">Save to</label><div class="folder-input"><span aria-hidden="true">▱</span><input id="output" name="output" required spellcheck="false" placeholder="Loading your default folder…"><button id="choose-folder" type="button">Browse…</button></div><p class="field-note">Organized into Videos, Audio, Transcripts, Playlists or Channels automatically.</p><p class="field-note" id="hosted-storage-note" hidden>Private to this browser session. Files expire after 1 hour without activity. Limits: 50 items per section, 256 MB per file, 1 GB per session and 20 minutes per job. Use the local app for larger archives.</p><p class="field-note" id="remote-folder-note" hidden>On another device, folder actions open on the host computer.</p>
+          <details id="advanced"><summary>More control <span>Playlists, extras &amp; connection</span></summary><div class="advanced-content">
+            <div class="two-columns"><label>Channel section<select id="channel-scope"><option value="auto">Use the link as pasted</option><option value="videos">Videos</option><option value="shorts">Shorts</option><option value="streams">Streams</option><option value="all">All three sections</option></select></label><label>Playlist items<input id="items" placeholder="All items · or 1:10,15" spellcheck="false"></label></div>
+            <div class="two-columns"><label>Uploaded after<input id="date-after" type="date"></label><label>Uploaded before<input id="date-before" type="date"></label></div>
+            <div class="two-columns"><label>Maximum file size<input id="max-filesize" placeholder="Unlimited · e.g. 2G" spellcheck="false"></label><label>Download speed limit<input id="limit-rate" placeholder="Unlimited · e.g. 5M" spellcheck="false"></label></div>
+            <div class="two-columns"><label>Browser sign-in<select id="browser"><option value="">None · public videos</option><option value="chrome">Chrome</option><option value="firefox">Firefox</option><option value="safari">Safari</option><option value="edge">Edge</option><option value="brave">Brave</option><option value="chromium">Chromium</option></select><small>Optional. Uses cookies from the selected browser for videos that need your account.</small></label><label>Sponsor segments<select id="sponsorblock"><option value="off">Keep the original video</option><option value="mark">Mark segments as chapters</option><option value="remove">Remove segments</option></select><small>Uses community data from SponsorBlock.</small></label></div>
+            <div class="two-columns"><label>YouTube player<select id="youtube-client"><option value="auto">Automatic · recommended</option><option value="default">Default clients only</option><option value="web_safari">Default + Safari</option></select><small>Automatic retries supported download errors with an alternative player.</small></label><label>User-Agent<input id="user-agent" maxlength="1024" placeholder="Automatic · or paste your browser User-Agent" spellcheck="false" autocomplete="off"><small>Optional. Match the browser used for sign-in. Leave blank to use yt-dlp defaults.</small></label></div>
+            <fieldset class="extras"><legend>Save extra files</legend><label><input type="checkbox" id="thumbnail">Thumbnail</label><label><input type="checkbox" id="description">Description</label><label><input type="checkbox" id="info-json">Video details (JSON)</label><label><input type="checkbox" id="comments">Comments (can be large)</label></fieldset>
+            <label class="standalone-check"><input id="archive" type="checkbox" checked>Skip completed media in playlists and channels</label><p class="field-note">Tracked separately for each quality. Disabled when captions are requested so missing transcripts can be added.</p>
+          </div></details>
+        </section>
+        <div class="form-message" id="form-error" role="alert" hidden></div>
+        <button class="mobile-submit primary" type="submit">Add to downloads <span aria-hidden="true">↓</span></button>
+      </form>
+      <aside class="side-column">
+        <section class="summary-card" aria-labelledby="summary-title"><div class="summary-heading"><h2 id="summary-title">Your download</h2><span class="mini-badge">READY WHEN YOU ARE</span></div><div class="summary-art" aria-hidden="true"><div class="paper paper-back"></div><div class="paper paper-front"><span id="summary-symbol">▷</span><span class="paper-lines"></span><span class="paper-tag" id="summary-tag">VIDEO</span></div><span class="art-spark">✳</span><span class="art-dot"></span></div><h3 id="summary-main">Video + audio</h3><p class="summary-sub" id="summary-detail">Best available · original codecs</p><dl class="summary-details"><div><dt>Links</dt><dd id="summary-links">Add your first link</dd></div><div><dt>Transcript</dt><dd id="summary-transcript">Not included</dd></div><div><dt>Destination</dt><dd id="summary-folder">Downloads / YTLoad</dd></div></dl><button id="submit-button" class="primary" type="submit" form="download-form">Add to downloads <span aria-hidden="true">↓</span></button><p class="summary-note">You can keep adding links while downloads run.</p><p class="remote-note" id="remote-note" hidden>Saved on the host computer. Use a file link below to save a copy on this device.</p></section>
+        <section class="tip-card"><span aria-hidden="true">↗</span><div><h3 id="tip-title">A little quality advice</h3><p id="tip-text">1080p is a great everyday choice. Choose Best available to keep the highest source quality.</p></div></section>
+      </aside>
+    </div>
+    <section id="queue-section" class="queue-section" aria-labelledby="queue-title"><div class="queue-heading"><div><span class="eyebrow">YOUR LIBRARY IN THE MAKING</span><h2 id="queue-title">Downloads <span id="queue-count">0</span></h2></div><button id="open-folder" class="secondary" type="button">Open folder <span aria-hidden="true">↗</span></button></div><p id="queue-status" class="sr-only" aria-live="polite"></p><div id="queue"><div class="queue-empty"><span class="empty-icon" aria-hidden="true">↓</span><div><h3>A little empty. Full of possibility.</h3><p>Add a link above. Your progress and saved files will appear here.</p></div></div></div></section>
+    <footer><span>YTLoad <span id="version"></span></span><span class="connection" id="connection"><span class="dot"></span>Local workspace</span><button class="text-button" id="footer-help" type="button">Need a hand? ↗</button></footer>
+  </main>
+  <dialog id="help-dialog" aria-labelledby="help-title"><div class="dialog-top"><span class="eyebrow">QUICK GUIDE</span><button id="close-help" type="button" aria-label="Close guide">×</button></div><h2 id="help-title">From link to library.</h2><ol><li><strong>Paste a link.</strong> A single video, a playlist, or a channel. Check link to preview available quality and caption languages.</li><li><strong>Choose what to save.</strong> Video includes sound. Audio saves sound only. Transcript exports existing captions. Details saves metadata.</li><li><strong>Choose quality and format.</strong> Quality is an upper limit, never an upscale. MP4 favors compatibility; Auto preserves original codecs.</li><li><strong>Add to downloads.</strong> Everything saves directly to your selected folder. Follow progress, cancel, or retry in Downloads below.</li></ol><div class="help-note"><strong>A few useful details</strong><p>Transcripts require captions on the source. Creator captions are preferred when available. SRT and VTT include timing; TXT is easy to read.</p><p>Keep the terminal running while the workspace is open. The queue stays through a page refresh and clears when the app closes. Partially downloaded media can resume on retry.</p><p>A video link containing a playlist saves that video only. To save a playlist, paste its playlist URL. Download only media you have permission to save.</p></div><button id="help-done" type="button" class="primary">Got it <span aria-hidden="true">→</span></button></dialog>
+  <div id="toast" class="toast" role="status" hidden></div>
+</body>
+</html>

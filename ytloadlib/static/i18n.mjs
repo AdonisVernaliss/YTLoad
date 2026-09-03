@@ -1,0 +1,334 @@
+export const messages = {
+  "YouTube videos, playlists & channels": ["YouTube-Videos, Playlists & Kanäle", "Видео, плейлисты и каналы YouTube"],
+  "Storage": ["Speicher", "Хранилище"],
+  "The processed file exceeds the public 256 MB limit. Choose a smaller format or use the local app.": ["Die verarbeitete Datei überschreitet das öffentliche Limit von 256 MB. Wählen Sie ein kleineres Format oder nutzen Sie die lokale App.", "Обработанный файл превышает публичный лимит 256 МБ. Выберите более компактный формат или используйте локальное приложение."],
+  'Please wait before checking more links.': ['Warten Sie, bevor Sie weitere Links prüfen.', 'Подождите перед проверкой новых ссылок.'],
+  "Public workspace": ["Öffentlicher Arbeitsbereich", "Публичная загрузка"],
+  "Temporary server storage": ["Temporärer Serverspeicher", "Временное хранилище сервера"],
+  "Private to this browser session. Files expire after 1 hour without activity. Limits: 50 items per section, 256 MB per file, 1 GB per session and 20 minutes per job. Use the local app for larger archives.": ["Nur für diese Browsersitzung. Dateien verfallen nach 1 Stunde ohne Aktivität. Limits: 50 Einträge pro Bereich, 256 MB pro Datei, 1 GB pro Sitzung und 20 Minuten pro Auftrag. Für größere Archive die lokale App verwenden.", "Доступно только в этой сессии браузера. Файлы удаляются через 1 час без активности. Лимиты: 50 записей на раздел, 256 МБ на файл, 1 ГБ на сессию и 20 минут на задание. Для больших архивов используйте локальное приложение."],
+  "The public workspace accepts HTTPS YouTube video, playlist and channel links only.": ["Der öffentliche Arbeitsbereich akzeptiert nur HTTPS-Links zu YouTube-Videos, Playlists und Kanälen.", "Публичная версия принимает только HTTPS-ссылки на видео, плейлисты и каналы YouTube."],
+  "Use a direct YouTube video, playlist or channel link.": ["Verwenden Sie einen direkten YouTube-Link zu einem Video, einer Playlist oder einem Kanal.", "Используйте прямую ссылку на видео, плейлист или канал YouTube."],
+  "Browser sign-in, local folders, comments and SponsorBlock are available in the local app only.": ["Browser-Anmeldung, lokale Ordner, Kommentare und SponsorBlock sind nur in der lokalen App verfügbar.", "Вход через браузер, локальные папки, комментарии и SponsorBlock доступны в локальном приложении."],
+  "Add up to 3 links per public batch.": ["Fügen Sie bis zu 3 Links pro öffentlichem Auftrag hinzu.", "Добавьте не более 3 ссылок за раз в публичной версии."],
+  "Public collections support up to 50 items per section. Use a range such as 1:50 or 51:100.": ["Öffentliche Sammlungen unterstützen bis zu 50 Einträge pro Bereich. Verwenden Sie einen Bereich wie 1:50 oder 51:100.", "В публичной версии доступно до 50 записей за раз в каждом разделе. Укажите диапазон 1:50 или 51:100."],
+  "Public downloads allow up to 256 MB per file and 2 MB/s. Use the local app for larger downloads.": ["Öffentliche Downloads erlauben bis zu 256 MB pro Datei und 2 MB/s. Für größere Downloads die lokale App verwenden.", "В публичной версии доступно до 256 МБ на файл и 2 МБ/с. Для больших загрузок используйте локальное приложение."],
+  "The public workspace is busy. Please try again later.": ["Der öffentliche Arbeitsbereich ist ausgelastet. Bitte später erneut versuchen.", "Публичная версия занята. Попробуйте позже."],
+  "The public queue is full. Please wait for a download to finish.": ["Die öffentliche Warteschlange ist voll. Warten Sie, bis ein Download abgeschlossen ist.", "Общая очередь заполнена. Дождитесь завершения загрузки."],
+  "You can have up to 4 active public downloads.": ["Sie können bis zu 4 aktive öffentliche Downloads haben.", "В публичной версии доступно до 4 активных заданий на сессию."],
+  "Please wait before adding more downloads.": ["Warten Sie, bevor Sie weitere Downloads hinzufügen.", "Подождите перед добавлением новых загрузок."],
+  "Temporary storage is full. Save your files and try again later, or use the local app.": ["Der temporäre Speicher ist voll. Speichern Sie Ihre Dateien und versuchen Sie es später oder nutzen Sie die lokale App.", "Временное хранилище заполнено. Сохраните файлы и попробуйте позже или используйте локальное приложение."],
+  "There is not enough space in the public queue for this batch.": ["In der öffentlichen Warteschlange ist nicht genug Platz für diesen Auftrag.", "В публичной очереди недостаточно места для этого набора ссылок."],
+  "Your temporary session expired. Reload the workspace.": ["Ihre temporäre Sitzung ist abgelaufen. Laden Sie den Arbeitsbereich neu.", "Временная сессия завершена. Обновите страницу."],
+  "This download is not available in your session.": ["Dieser Download ist in Ihrer Sitzung nicht verfügbar.", "Эта загрузка недоступна в вашей сессии."],
+  "A public storage or time limit was reached. Use the local app for larger downloads.": ["Ein öffentliches Speicher- oder Zeitlimit wurde erreicht. Für größere Downloads die lokale App verwenden.", "Достигнут лимит хранилища или времени публичной версии. Для больших загрузок используйте локальное приложение."],
+  "Another link check is in progress. Please wait.": ["Ein anderer Link wird gerade geprüft. Bitte warten.", "Сейчас проверяется другая ссылка. Подождите."],
+  "Only this workspace can change its downloads.": ["Nur dieser Arbeitsbereich kann seine Downloads ändern.", "Управлять загрузками можно только из этого пространства."],
+  "Up to 256M": ["Bis zu 256M", "До 256M"],
+  "Up to 2M": ["Bis zu 2M", "До 2M"],
+  "YouTube player": ["YouTube-Player", "Плеер YouTube"],
+  "Automatic · recommended": ["Automatisch · empfohlen", "Автоматически · рекомендуется"],
+  "Default clients only": ["Nur Standard-Clients", "Только стандартные клиенты"],
+  "Default + Safari": ["Standard + Safari", "Стандартные + Safari"],
+  "Automatic retries supported download errors with an alternative player.": ["Bei passenden Downloadfehlern versucht Automatisch einen alternativen Player.", "При подходящих ошибках автоматический режим повторяет загрузку через другой плеер."],
+  "Automatic · or paste your browser User-Agent": ["Automatisch · oder Browser-User-Agent einfügen", "Автоматически · или вставьте User-Agent браузера"],
+  "Optional. Match the browser used for sign-in. Leave blank to use yt-dlp defaults.": ["Optional. Muss zum angemeldeten Browser passen. Leer lassen für die yt-dlp-Standardwerte.", "По желанию. Должен совпадать с браузером для входа. Пустое поле использует настройки yt-dlp."],
+  "Choose Automatic, Default or Default + Safari for the YouTube player.": ["Wählen Sie Automatisch, Standard oder Standard + Safari für den YouTube-Player.", "Выберите автоматический режим, стандартные клиенты или стандартные + Safari."],
+  "User-Agent must contain between 1 and 1024 printable characters.": ["User-Agent muss 1 bis 1024 druckbare Zeichen enthalten.", "User-Agent должен содержать от 1 до 1024 печатных символов."],
+  "User-Agent must be a single printable ASCII header value.": ["User-Agent muss ein einzelner druckbarer ASCII-Headerwert sein.", "User-Agent должен быть одной строкой из печатных ASCII-символов."],
+  'YTLoad — Your local workspace': ['YTLoad — Ihr lokaler Arbeitsbereich', 'YTLoad — локальное пространство'],
+  'Skip to download settings': ['Zu den Download-Einstellungen', 'Перейти к настройкам загрузки'],
+  'YTLoad home': ['YTLoad Startseite', 'Главная YTLoad'],
+  'Workspace navigation': ['Arbeitsbereich-Navigation', 'Навигация'],
+  'Workspace': ['Arbeitsbereich', 'Загрузка'],
+  'Downloads': ['Downloads', 'Загрузки'],
+  'Quick guide': ['Kurzanleitung', 'Краткое руководство'],
+  'Language': ['Sprache', 'Язык'],
+  'Switch to light theme': ['Zum hellen Design wechseln', 'Включить светлую тему'],
+  'Switch to dark theme': ['Zum dunklen Design wechseln', 'Включить тёмную тему'],
+  'Local workspace': ['Lokaler Arbeitsbereich', 'Локальное пространство'],
+  'Disconnected': ['Verbindung getrennt', 'Нет соединения'],
+  'YOUR MEDIA. YOUR WAY.': ['IHRE MEDIEN. IHR WEG.', 'ВАШИ МЕДИА. ВАШ ВЫБОР.'],
+  'A good link is worth keeping.': ['Ein guter Link verdient einen Platz.', 'Хорошее стоит сохранить.'],
+  'Save the video, keep the audio, or take the words with you.': ['Video speichern, Audio behalten oder die Worte mitnehmen.', 'Сохраните видео, оставьте звук или возьмите с собой слова.'],
+  'Saved to your computer.': ['Auf Ihrem Computer gespeichert.', 'Сохраняется на вашем компьютере.'],
+  'Right where you want it.': ['Genau dort, wo Sie es möchten.', 'Именно там, где вам удобно.'],
+  'Start with a link': ['Mit einem Link beginnen', 'Начните со ссылки'],
+  'ONE OR MANY': ['EINER ODER MEHRERE', 'ОДНА ИЛИ НЕСКОЛЬКО'],
+  'Video, playlist or channel links': ['Video-, Playlist- oder Kanallinks', 'Ссылки на видео, плейлисты или каналы'],
+  'Paste one or more links…\nOne link per line.': ['Links einfügen…\nEin Link pro Zeile.', 'Вставьте ссылки…\nКаждая с новой строки.'],
+  'Paste links from clipboard': ['Links aus der Zwischenablage einfügen', 'Вставить ссылки из буфера обмена'],
+  'Paste': ['Einfügen', 'Вставить'],
+  'YouTube & other supported sites': ['YouTube & weitere unterstützte Seiten', 'YouTube и другие поддерживаемые сайты'],
+  'Import .txt': ['.txt importieren', 'Импорт .txt'],
+  'Check link': ['Link prüfen', 'Проверить ссылку'],
+  'Choose what to keep': ['Auswählen, was bleibt', 'Выберите, что сохранить'],
+  'Download type': ['Download-Typ', 'Тип загрузки'],
+  'Video': ['Video', 'Видео'],
+  'Picture + sound': ['Bild + Ton', 'Изображение и звук'],
+  'Audio': ['Audio', 'Аудио'],
+  'Just the sound': ['Nur der Ton', 'Только звук'],
+  'Transcript': ['Transkript', 'Транскрипт'],
+  'Words & captions': ['Text & Untertitel', 'Текст и субтитры'],
+  'Details': ['Details', 'Данные'],
+  'Video information': ['Videoinformationen', 'Информация о видео'],
+  'Video quality': ['Videoqualität', 'Качество видео'],
+  'Best available': ['Beste verfügbare Qualität', 'Лучшее доступное'],
+  'Up to 4K · 2160p': ['Bis zu 4K · 2160p', 'До 4K · 2160p'],
+  'Up to 2K · 1440p': ['Bis zu 2K · 1440p', 'До 2K · 1440p'],
+  'Up to Full HD · 1080p': ['Bis zu Full HD · 1080p', 'До Full HD · 1080p'],
+  'Up to HD · 720p': ['Bis zu HD · 720p', 'До HD · 720p'],
+  'Up to SD · 480p': ['Bis zu SD · 480p', 'До SD · 480p'],
+  'Small file · up to 720p': ['Kleine Datei · bis 720p', 'Небольшой файл · до 720p'],
+  'Most compatible · H.264': ['Hohe Kompatibilität · H.264', 'Максимум совместимости · H.264'],
+  'Uses the best source within this limit.': ['Verwendet die beste Quelle innerhalb dieser Grenze.', 'Лучшее доступное качество в пределах ограничения.'],
+  'Video format': ['Videoformat', 'Формат видео'],
+  'Auto · keep source quality': ['Auto · Quellqualität erhalten', 'Авто · исходное качество'],
+  'MP4 · widest compatibility': ['MP4 · hohe Kompatibilität', 'MP4 · широкая совместимость'],
+  'MKV · flexible container': ['MKV · flexibler Container', 'MKV · гибкий контейнер'],
+  'Keeps original codecs. Merged video uses MKV.': ['Originalcodecs bleiben erhalten. Zusammengeführte Videos verwenden MKV.', 'Исходные кодеки сохраняются. Видео из отдельных потоков — в MKV.'],
+  'H.264 video + AAC audio for players and editors.': ['H.264-Video + AAC-Audio für Player und Schnittprogramme.', 'Видео H.264 и звук AAC для плееров и видеоредакторов.'],
+  'Keeps source codecs in a flexible MKV container.': ['Quellcodecs bleiben im flexiblen MKV-Container erhalten.', 'Исходные кодеки в универсальном контейнере MKV.'],
+  'Audio format': ['Audioformat', 'Формат аудио'],
+  'Original · no conversion': ['Original · ohne Konvertierung', 'Оригинал · без конвертации'],
+  'MP3 · works almost everywhere': ['MP3 · fast überall abspielbar', 'MP3 · работает почти везде'],
+  'M4A · compact and compatible': ['M4A · kompakt und kompatibel', 'M4A · компактный и совместимый'],
+  'Opus · efficient compression': ['Opus · effiziente Komprimierung', 'Opus · эффективное сжатие'],
+  'WAV · uncompressed': ['WAV · unkomprimiert', 'WAV · без сжатия'],
+  'FLAC · lossless container': ['FLAC · verlustfreier Container', 'FLAC · контейнер без потерь'],
+  'WAV and FLAC produce larger files; they cannot restore quality missing from the source.': ['WAV und FLAC erzeugen größere Dateien; fehlende Quellqualität können sie nicht wiederherstellen.', 'WAV и FLAC создают большие файлы, но не восстанавливают качество, которого нет в источнике.'],
+  'Saves a JSON file with the title, channel, dates and available video details. No video or audio is downloaded.': ['Speichert Titel, Kanal, Datumsangaben und verfügbare Details als JSON. Video und Audio werden nicht geladen.', 'Сохранит JSON с названием, каналом, датами и доступными сведениями. Видео и аудио не скачиваются.'],
+  'Add a transcript': ['Transkript hinzufügen', 'Добавить транскрипт'],
+  'Keep a readable copy alongside your media.': ['Lesbaren Text zusammen mit den Medien speichern.', 'Читаемый текст рядом с медиафайлом.'],
+  'Export existing subtitles as readable text or timed captions. No media download.': ['Vorhandene Untertitel als Text oder mit Zeitangaben exportieren. Ohne Mediendownload.', 'Экспорт готовых субтитров в текст или файл с таймкодами. Без загрузки медиа.'],
+  'Default track · English if available': ['Standardspur · Englisch, falls verfügbar', 'По умолчанию · английский, если есть'],
+  'English': ['Englisch', 'Английский'],
+  'Russian': ['Russisch', 'Русский'],
+  'German': ['Deutsch', 'Немецкий'],
+  'Spanish': ['Spanisch', 'Испанский'],
+  'French': ['Französisch', 'Французский'],
+  'Original automatic track': ['Automatische Originalspur', 'Автоматические на языке оригинала'],
+  'All available languages': ['Alle verfügbaren Sprachen', 'Все доступные языки'],
+  'Custom language codes…': ['Eigene Sprachcodes…', 'Указать коды языков…'],
+  'Caption source': ['Untertitelquelle', 'Источник субтитров'],
+  'Prefer creator captions, otherwise automatic': ['Vom Ersteller, sonst automatisch', 'Авторские, иначе автоматические'],
+  'Creator captions only': ['Nur vom Ersteller', 'Только авторские'],
+  'Automatic captions only': ['Nur automatisch erzeugte', 'Только автоматические'],
+  'Language codes': ['Sprachcodes', 'Коды языков'],
+  'Comma-separated codes or patterns. Check the link to see available tracks.': ['Codes oder Muster durch Kommas trennen. Verfügbare Spuren mit „Link prüfen“ anzeigen.', 'Коды или шаблоны через запятую. Проверка ссылки покажет доступные языки.'],
+  'Export as': ['Exportieren als', 'Форматы экспорта'],
+  'Select one or more': ['Eine oder mehrere auswählen', 'Выберите один или несколько'],
+  'Readable text': ['Lesbarer Text', 'Читаемый текст'],
+  'For video editors': ['Für Schnittprogramme', 'Для видеоредакторов'],
+  'Web captions': ['Web-Untertitel', 'Веб-субтитры'],
+  'Structured data': ['Strukturierte Daten', 'Структурированные данные'],
+  'Timestamps in TXT': ['Zeitangaben in TXT', 'Таймкоды в TXT'],
+  'Also embed captions in video': ['Untertitel auch ins Video einbetten', 'Также встроить субтитры в видео'],
+  'Captions must exist on the source. Automatic captions may contain mistakes. Original subtitle files are kept too.': ['Untertitel müssen auf der Quelle vorhanden sein. Automatische Untertitel können Fehler enthalten. Die Originaldateien bleiben erhalten.', 'Субтитры должны быть у источника. В автоматических возможны ошибки. Исходные файлы субтитров тоже сохраняются.'],
+  'Give it a home': ['Einen Speicherort wählen', 'Выберите место'],
+  'Save to': ['Speichern unter', 'Сохранить в'],
+  'Loading your default folder…': ['Standardordner wird geladen…', 'Загрузка папки по умолчанию…'],
+  'Browse…': ['Auswählen…', 'Выбрать…'],
+  'Organized into Videos, Audio, Transcripts, Playlists or Channels automatically.': ['Automatisch in Videos, Audio, Transcripts, Playlists oder Channels eingeordnet.', 'Автоматические папки: Videos, Audio, Transcripts, Playlists и Channels.'],
+  'More control': ['Weitere Einstellungen', 'Дополнительно'],
+  'Playlists, extras & connection': ['Playlists, Extras & Verbindung', 'Плейлисты, файлы и подключение'],
+  'Channel section': ['Kanalbereich', 'Раздел канала'],
+  'Use the link as pasted': ['Eingefügten Link verwenden', 'Как указано в ссылке'],
+  'Videos': ['Videos', 'Видео'],
+  'Shorts': ['Shorts', 'Shorts'],
+  'Streams': ['Livestreams', 'Трансляции'],
+  'All three sections': ['Alle drei Bereiche', 'Все три раздела'],
+  'Playlist items': ['Playlist-Einträge', 'Элементы плейлиста'],
+  'All items · or 1:10,15': ['Alle Einträge · oder 1:10,15', 'Все элементы · или 1:10,15'],
+  'Uploaded after': ['Hochgeladen nach', 'Опубликовано после'],
+  'Uploaded before': ['Hochgeladen vor', 'Опубликовано до'],
+  'Maximum file size': ['Maximale Dateigröße', 'Максимальный размер'],
+  'Download speed limit': ['Download-Geschwindigkeit', 'Ограничение скорости'],
+  'Unlimited · e.g. 2G': ['Unbegrenzt · z. B. 2G', 'Без ограничений · например 2G'],
+  'Unlimited · e.g. 5M': ['Unbegrenzt · z. B. 5M', 'Без ограничений · например 5M'],
+  'Browser sign-in': ['Browser-Anmeldung', 'Вход через браузер'],
+  'None · public videos': ['Keine · öffentliche Videos', 'Без входа · открытые видео'],
+  'Optional. Uses cookies from the selected browser for videos that need your account.': ['Optional. Nutzt Cookies des gewählten Browsers für Videos, die Ihr Konto erfordern.', 'По желанию. Использует cookies выбранного браузера на компьютере для видео, требующих входа.'],
+  'Sponsor segments': ['Sponsorabschnitte', 'Спонсорские вставки'],
+  'Keep the original video': ['Originalvideo behalten', 'Сохранить оригинальное видео'],
+  'Mark segments as chapters': ['Abschnitte als Kapitel markieren', 'Отметить вставки главами'],
+  'Remove segments': ['Abschnitte entfernen', 'Удалить вставки'],
+  'Uses community data from SponsorBlock.': ['Nutzt Community-Daten von SponsorBlock.', 'Использует данные сообщества SponsorBlock.'],
+  'Save extra files': ['Zusätzliche Dateien speichern', 'Дополнительные файлы'],
+  'Thumbnail': ['Vorschaubild', 'Обложка'],
+  'Description': ['Beschreibung', 'Описание'],
+  'Video details (JSON)': ['Videodetails (JSON)', 'Сведения о видео (JSON)'],
+  'Comments (can be large)': ['Kommentare (eventuell umfangreich)', 'Комментарии (могут быть большими)'],
+  'Skip completed media in playlists and channels': ['Bereits geladene Medien in Playlists und Kanälen überspringen', 'Пропускать загруженные медиа в плейлистах и каналах'],
+  'Tracked separately for each quality. Disabled when captions are requested so missing transcripts can be added.': ['Für jede Qualität getrennt erfasst. Bei Untertiteln deaktiviert, damit fehlende Transkripte ergänzt werden.', 'Учитываются отдельно для каждого качества. При запросе субтитров отключается, чтобы можно было добавить недостающий текст.'],
+  'Your download': ['Ihr Download', 'Ваша загрузка'],
+  'READY WHEN YOU ARE': ['BEREIT, WENN SIE ES SIND', 'ВСЁ ГОТОВО К СТАРТУ'],
+  'Video + audio': ['Video + Audio', 'Видео со звуком'],
+  'Audio only': ['Nur Audio', 'Только аудио'],
+  'Transcript only': ['Nur Transkript', 'Только транскрипт'],
+  'Video details': ['Videodetails', 'Сведения о видео'],
+  'original codecs': ['Originalcodecs', 'исходные кодеки'],
+  'no media download': ['ohne Mediendownload', 'без загрузки медиа'],
+  'Links': ['Links', 'Ссылки'],
+  'Add your first link': ['Ersten Link hinzufügen', 'Добавьте первую ссылку'],
+  'Not included': ['Nicht enthalten', 'Не включён'],
+  'Choose a format': ['Format wählen', 'Выберите формат'],
+  'Destination': ['Speicherort', 'Папка'],
+  'Choose a folder': ['Ordner wählen', 'Выберите папку'],
+  'Add to downloads': ['Download hinzufügen', 'Добавить в загрузки'],
+  'You can keep adding links while downloads run.': ['Während des Downloads können Sie weitere Links hinzufügen.', 'Можно добавлять новые ссылки, пока идут загрузки.'],
+  'A little quality advice': ['Ein Tipp zur Qualität', 'Немного о качестве'],
+  '1080p is a great everyday choice. Choose Best available to keep the highest source quality.': ['1080p eignet sich für den Alltag. „Beste verfügbare Qualität“ erhält die höchste Quellqualität.', '1080p подходит на каждый день. «Лучшее доступное» сохранит максимальное качество источника.'],
+  'Sound, without the picture': ['Ton ohne Bild', 'Звук без изображения'],
+  'Choose Original to keep the source audio. MP3 works in most players; M4A is a compact everyday choice.': ['„Original“ erhält das Quellaudio. MP3 läuft in fast allen Playern; M4A ist eine kompakte Alternative.', '«Оригинал» сохраняет исходный звук. MP3 работает в большинстве плееров, M4A — компактная альтернатива.'],
+  'Words you can work with': ['Text zum Weiterarbeiten', 'Текст для ваших задач'],
+  'TXT is for reading. SRT and VTT keep timing for editors and players. JSON is useful for processing text.': ['TXT ist zum Lesen. SRT und VTT enthalten Zeitangaben für Player und Schnittprogramme. JSON dient der Textverarbeitung.', 'TXT удобен для чтения. SRT и VTT содержат таймкоды для редакторов и плееров. JSON — для обработки текста.'],
+  'All the useful details': ['Alle wichtigen Details', 'Все полезные сведения'],
+  'Add the thumbnail or description under More control to keep them alongside the video information.': ['Unter „Weitere Einstellungen“ Vorschaubild oder Beschreibung zu den Videoinformationen hinzufügen.', 'В разделе «Дополнительно» можно сохранить обложку и описание вместе со сведениями о видео.'],
+  'YOUR LIBRARY IN THE MAKING': ['IHRE SAMMLUNG ENTSTEHT', 'ВАША КОЛЛЕКЦИЯ СОЗДАЁТСЯ'],
+  'Open folder': ['Ordner öffnen', 'Открыть папку'],
+  'A little empty. Full of possibility.': ['Noch leer. Voller Möglichkeiten.', 'Пока пусто. Всё впереди.'],
+  'Add a link above. Your progress and saved files will appear here.': ['Fügen Sie oben einen Link ein. Fortschritt und gespeicherte Dateien erscheinen hier.', 'Добавьте ссылку выше. Здесь появятся прогресс и сохранённые файлы.'],
+  'Your files stay on your computer.': ['Ihre Dateien bleiben auf Ihrem Computer.', 'Ваши файлы остаются на вашем компьютере.'],
+  'Need a hand? ↗': ['Brauchen Sie Hilfe? ↗', 'Нужна помощь? ↗'],
+  'QUICK GUIDE': ['KURZANLEITUNG', 'КРАТКОЕ РУКОВОДСТВО'],
+  'Close guide': ['Anleitung schließen', 'Закрыть руководство'],
+  'From link to library.': ['Vom Link zur Sammlung.', 'От ссылки к коллекции.'],
+  'Paste a link.': ['Link einfügen.', 'Вставьте ссылку.'],
+  'A single video, a playlist, or a channel. Check link to preview available quality and caption languages.': ['Ein Video, eine Playlist oder ein Kanal. „Link prüfen“ zeigt Qualität und Untertitelsprachen.', 'На видео, плейлист или канал. Проверка ссылки покажет качество и языки субтитров.'],
+  'Choose what to save.': ['Inhalt auswählen.', 'Выберите содержимое.'],
+  'Video includes sound. Audio saves sound only. Transcript exports existing captions. Details saves metadata.': ['Video enthält Ton. Audio speichert nur Ton. Transkript exportiert vorhandene Untertitel. Details speichert Metadaten.', 'Видео включает звук. Аудио — только звук. Транскрипт экспортирует готовые субтитры. Данные — сведения о видео.'],
+  'Choose quality and format.': ['Qualität und Format wählen.', 'Укажите качество и формат.'],
+  'Quality is an upper limit, never an upscale. MP4 favors compatibility; Auto preserves original codecs.': ['Die Qualität ist eine Obergrenze, keine Hochskalierung. MP4 bietet Kompatibilität; Auto erhält Originalcodecs.', 'Качество — верхняя граница, без искусственного увеличения. MP4 даёт совместимость, Авто сохраняет исходные кодеки.'],
+  'Add to downloads.': ['Download hinzufügen.', 'Добавьте в загрузки.'],
+  'Everything saves directly to your selected folder. Follow progress, cancel, or retry in Downloads below.': ['Alles wird im gewählten Ordner gespeichert. Unter Downloads können Sie den Fortschritt verfolgen, abbrechen oder erneut starten.', 'Всё сохраняется в выбранную папку. В загрузках ниже можно следить за прогрессом, отменять и повторять.'],
+  'A few useful details': ['Ein paar nützliche Hinweise', 'Полезные подробности'],
+  'Transcripts require captions on the source. Creator captions are preferred when available. SRT and VTT include timing; TXT is easy to read.': ['Transkripte benötigen vorhandene Untertitel. Untertitel vom Ersteller werden bevorzugt. SRT und VTT enthalten Zeitangaben; TXT ist gut lesbar.', 'Для транскрипта нужны субтитры у источника. При наличии предпочтение отдаётся авторским. SRT и VTT содержат таймкоды, TXT удобен для чтения.'],
+  'Keep the terminal running while the workspace is open. The queue stays through a page refresh and clears when the app closes. Partially downloaded media can resume on retry.': ['Lassen Sie das Terminal geöffnet. Die Warteschlange bleibt beim Neuladen erhalten und wird beim Beenden geleert. Teilweise geladene Medien können fortgesetzt werden.', 'Оставляйте терминал работающим. Очередь сохраняется при обновлении страницы и очищается при закрытии программы. Незавершённые медиа можно продолжить при повторе.'],
+  'A video link containing a playlist saves that video only. To save a playlist, paste its playlist URL. Download only media you have permission to save.': ['Ein Videolink mit Playlist-Bezug speichert nur dieses Video. Für eine Playlist deren eigenen Link einfügen. Laden Sie nur Medien, die Sie speichern dürfen.', 'Ссылка на видео с параметром плейлиста сохраняет только это видео. Для плейлиста нужна его отдельная ссылка. Скачивайте только медиа, которые вам разрешено сохранять.'],
+  'Got it': ['Verstanden', 'Понятно'],
+  'Queued': ['Wartet', 'В очереди'],
+  'Downloading': ['Wird geladen', 'Загружается'],
+  'Stopping…': ['Wird angehalten…', 'Остановка…'],
+  'Saved': ['Gespeichert', 'Сохранено'],
+  'Finished': ['Beendet', 'Завершено'],
+  'Needs attention': ['Prüfung erforderlich', 'Требует внимания'],
+  'Cancelled': ['Abgebrochen', 'Отменено'],
+  'Cancel': ['Abbrechen', 'Отменить'],
+  'Retry': ['Erneut versuchen', 'Повторить'],
+  'Current file progress': ['Fortschritt der aktuellen Datei', 'Прогресс текущего файла'],
+  'Finalizing files…': ['Dateien werden fertiggestellt…', 'Завершение обработки…'],
+  'Connecting and reading video information…': ['Verbindung und Videoinformationen werden geladen…', 'Подключение и получение сведений о видео…'],
+  'No new files. Items may already exist or be excluded by filters.': ['Keine neuen Dateien. Einträge sind bereits vorhanden oder durch Filter ausgeschlossen.', 'Новых файлов нет. Возможно, они уже существуют или исключены фильтрами.'],
+  'Waiting for the previous download': ['Wartet auf den vorherigen Download', 'Ожидание предыдущей загрузки'],
+  'Partial media files are kept for a retry': ['Teildateien bleiben für einen neuen Versuch erhalten', 'Частичные файлы сохранены для повтора'],
+  'Activity log': ['Aktivitätsprotokoll', 'Журнал действий'],
+  'No activity yet.': ['Noch keine Aktivität.', 'Действий пока нет.'],
+  'Checking your first link. This may take a moment…': ['Der erste Link wird geprüft. Dies kann einen Moment dauern…', 'Проверяем первую ссылку. Это может занять некоторое время…'],
+  'Playlist or channel': ['Playlist oder Kanal', 'Плейлист или канал'],
+  'Source quality': ['Quellqualität', 'Исходное качество'],
+  'Caption availability varies by video. The link preview samples up to 5 items.': ['Die Untertitelverfügbarkeit variiert je Video. Die Vorschau prüft bis zu 5 Einträge.', 'Наличие субтитров зависит от видео. Предпросмотр проверяет до 5 элементов.'],
+  'No caption tracks were found for this video.': ['Für dieses Video wurden keine Untertitel gefunden.', 'Для этого видео субтитры не найдены.'],
+  'Add between 1 and 100 links per batch.': ['Fügen Sie 1 bis 100 Links pro Stapel hinzu.', 'Добавьте от 1 до 100 ссылок за раз.'],
+  'Use complete links beginning with https:// or http://.': ['Verwenden Sie vollständige Links mit https:// oder http://.', 'Используйте полные ссылки, начинающиеся с https:// или http://.'],
+  'Use HTTP or HTTPS links without embedded credentials.': ['HTTP- oder HTTPS-Links ohne eingebettete Zugangsdaten verwenden.', 'Используйте ссылки HTTP или HTTPS без встроенных учётных данных.'],
+  'Choose at least one transcript format: TXT, SRT, VTT or JSON.': ['Mindestens ein Transkriptformat wählen: TXT, SRT, VTT oder JSON.', 'Выберите хотя бы один формат транскрипта: TXT, SRT, VTT или JSON.'],
+  'Click the link field and press Ctrl+V or ⌘V to paste.': ['Klicken Sie ins Linkfeld und drücken Sie Strg+V oder ⌘V. Auf dem Telefon: Feld gedrückt halten und einfügen.', 'Нажмите поле ссылки и Ctrl+V или ⌘V. На телефоне: удерживайте поле и выберите «Вставить».'],
+  'Choose a text file smaller than 1 MB.': ['Eine Textdatei unter 1 MB wählen.', 'Выберите текстовый файл меньше 1 МБ.'],
+  'This file could not be read. Paste its links directly into the field.': ['Die Datei konnte nicht gelesen werden. Links direkt einfügen.', 'Не удалось прочитать файл. Вставьте ссылки прямо в поле.'],
+  'The request could not be completed.': ['Die Anfrage konnte nicht abgeschlossen werden.', 'Не удалось выполнить запрос.'],
+  'This request took too long. Check Downloads before trying again.': ['Die Anfrage dauert zu lange. Prüfen Sie Downloads vor einem neuen Versuch.', 'Запрос выполняется слишком долго. Проверьте загрузки перед повтором.'],
+  'The workspace is disconnected. Keep the terminal open and reload this page.': ['Die Verbindung wurde getrennt. Lassen Sie das Terminal offen und laden Sie die Seite neu.', 'Соединение потеряно. Оставьте терминал открытым и обновите страницу.'],
+  'No captions matched the selected source and language for this item.': ['Keine Untertitel für die gewählte Quelle und Sprache gefunden.', 'Для этого элемента нет субтитров с выбранным источником и языком.'],
+  'The site refused this download. Update yt-dlp and try again; select browser cookies only if this video requires your account.': ['Die Seite hat den Download abgelehnt. Aktualisieren Sie yt-dlp; wählen Sie Browser-Cookies nur bei erforderlicher Anmeldung.', 'Сайт отказал в загрузке. Обновите yt-dlp и повторите. Выбирайте cookies браузера, только если видео требует входа.'],
+  'This video requires sign-in. Select a browser where you are already signed in, then retry.': ['Dieses Video erfordert eine Anmeldung. Wählen Sie einen bereits angemeldeten Browser und versuchen Sie es erneut.', 'Видео требует входа. Выберите браузер на компьютере, где вы уже вошли, и повторите.'],
+  'YouTube requires a PO token. Update yt-dlp or configure a supported PO Token Provider.': ['YouTube benötigt ein PO-Token. Aktualisieren Sie yt-dlp oder richten Sie einen unterstützten PO Token Provider ein.', 'YouTube требует PO-токен. Обновите yt-dlp или настройте поддерживаемый PO Token Provider.'],
+  'YouTube could not complete its JavaScript challenge. Update yt-dlp and install or update Deno.': ['Die JavaScript-Prüfung von YouTube ist fehlgeschlagen. Aktualisieren Sie yt-dlp und Deno.', 'Не удалось пройти проверку JavaScript YouTube. Обновите yt-dlp и установите или обновите Deno.'],
+  'This quality or codec is unavailable. Try Best available with the Auto container.': ['Qualität oder Codec nicht verfügbar. Versuchen Sie die beste Qualität mit Auto-Container.', 'Это качество или кодек недоступны. Попробуйте лучшее качество с контейнером Авто.'],
+  'No captions matched your selection. Try another language or include automatic captions. This app exports existing captions; it does not transcribe audio.': ['Keine passenden Untertitel. Versuchen Sie eine andere Sprache oder automatische Untertitel. Die App exportiert vorhandene Untertitel und transkribiert kein Audio.', 'Подходящих субтитров нет. Попробуйте другой язык или автоматические субтитры. Приложение экспортирует готовые субтитры, а не распознаёт речь.'],
+  'A network request failed. Check your connection or wait before retrying if the site is rate-limiting requests.': ['Netzwerkanfrage fehlgeschlagen. Prüfen Sie die Verbindung oder warten Sie bei einer Zugriffsbeschränkung.', 'Ошибка сетевого запроса. Проверьте соединение или подождите, если сайт ограничивает частоту запросов.'],
+  'The site is limiting requests (HTTP 429). Wait before retrying and request fewer caption languages at a time.': ['Die Seite begrenzt Anfragen (HTTP 429). Warten Sie vor einem neuen Versuch und wählen Sie weniger Untertitelsprachen gleichzeitig.', 'Сайт ограничил частоту запросов (HTTP 429). Подождите перед повтором и выбирайте меньше языков субтитров за раз.'],
+  'Could not write the download. Check free disk space and folder permissions.': ['Datei konnte nicht gespeichert werden. Prüfen Sie freien Speicher und Ordnerrechte.', 'Не удалось записать файл. Проверьте свободное место и права на папку.'],
+  'The download could not finish. Open the activity log for details.': ['Der Download konnte nicht beendet werden. Details stehen im Aktivitätsprotokoll.', 'Не удалось завершить загрузку. Подробности — в журнале действий.'],
+  'The start date must be before the end date.': ['Das Startdatum muss vor dem Enddatum liegen.', 'Начальная дата должна быть раньше конечной.'],
+  'This folder does not exist yet. Start a download to create it.': ['Dieser Ordner existiert noch nicht. Ein Download erstellt ihn.', 'Этой папки ещё нет. Запустите загрузку, чтобы создать её.'],
+  'The folder dialog is unavailable. Paste a folder path into the field instead.': ['Der Ordnerdialog ist nicht verfügbar. Geben Sie den Ordnerpfad direkt ein.', 'Диалог выбора папки недоступен. Вставьте путь к папке в поле.'],
+  'A folder dialog is already open.': ['Ein Ordnerdialog ist bereits geöffnet.', 'Диалог выбора папки уже открыт.'],
+  'A link is already being checked. Please wait.': ['Ein Link wird bereits geprüft. Bitte warten.', 'Ссылка уже проверяется. Подождите.'],
+  'Checking this link took too long. You can still add it to the queue or try again.': ['Die Linkprüfung dauert zu lange. Sie können den Link trotzdem zur Warteschlange hinzufügen.', 'Проверка ссылки затянулась. Можно добавить её в очередь или повторить проверку.'],
+  'The site returned an unreadable preview. Try downloading directly.': ['Die Vorschau konnte nicht gelesen werden. Versuchen Sie einen direkten Download.', 'Не удалось прочитать предпросмотр. Попробуйте запустить загрузку напрямую.'],
+  'Choose subtitle languages, for example en, ru, orig or all.': ['Untertitelsprachen wählen, z. B. en, ru, orig oder all.', 'Выберите языки субтитров, например en, ru, orig или all.'],
+  'Reload the workspace to reconnect.': ['Zum Verbinden den Arbeitsbereich neu laden.', 'Обновите страницу для подключения.'],
+  'The queue is full. Wait for some downloads to finish.': ['Die Warteschlange ist voll. Warten Sie auf abgeschlossene Downloads.', 'Очередь заполнена. Дождитесь завершения части загрузок.'],
+  'This download is no longer in the queue.': ['Dieser Download ist nicht mehr in der Warteschlange.', 'Этой загрузки больше нет в очереди.'],
+  'The workspace is closing.': ['Der Arbeitsbereich wird geschlossen.', 'Приложение закрывается.'],
+  'Only failed or cancelled downloads can be retried.': ['Nur fehlgeschlagene oder abgebrochene Downloads können erneut gestartet werden.', 'Повторить можно только неудачные или отменённые загрузки.'],
+  'Deno was not found. Some YouTube videos need it to resolve playback challenges. The installer can add it.': ['Deno wurde nicht gefunden. Einige YouTube-Videos benötigen es. Das Installationsskript kann es hinzufügen.', 'Deno не найден. Он нужен для проверок некоторых видео YouTube. Его можно добавить установочным скриптом.'],
+  'yt-dlp is missing. Run the installer for your operating system, then restart this app.': ['yt-dlp fehlt. Führen Sie das Installationsskript für Ihr System aus und starten Sie die App neu.', 'yt-dlp не найден. Запустите установочный скрипт для вашей системы и перезапустите приложение.'],
+  'FFmpeg is required for video and audio. Run the installer, then restart this app.': ['FFmpeg wird für Video und Audio benötigt. Installieren Sie es und starten Sie die App neu.', 'Для видео и аудио требуется FFmpeg. Запустите установочный скрипт и перезапустите приложение.'],
+  'Saved on the host computer. Use a file link below to save a copy on this device.': ['Auf dem Host-Computer gespeichert. Über einen Dateilink unten eine Kopie auf diesem Gerät speichern.', 'Сохраняется на основном компьютере. По ссылке на файл ниже можно сохранить копию на это устройство.'],
+  'On another device, folder actions open on the host computer.': ['Auf einem anderen Gerät öffnen Ordneraktionen den Host-Computer.', 'С другого устройства выбор и открытие папки выполняются на основном компьютере.'],
+};
+
+const plural = (n, forms) => n % 100 >= 11 && n % 100 <= 14 ? forms[2] : n % 10 === 1 ? forms[0] : n % 10 >= 2 && n % 10 <= 4 ? forms[1] : forms[2];
+
+export function translateText(text, locale = 'en') {
+  if (locale === 'en' || !['de', 'ru'].includes(locale)) return text;
+  const index = locale === 'de' ? 0 : 1;
+  const key = text.trim();
+  if (messages[key]) return text.replace(key, messages[key][index]);
+  let match;
+  if ((match = key.match(/^(\d+) links?( added)?$/))) {
+    const n = Number(match[1]);
+    return locale === 'de' ? `${n} ${n === 1 ? 'Link' : 'Links'}${match[2] ? ' hinzugefügt' : ''}` : match[2] ? `Добавлено ссылок: ${n}` : `${n} ${plural(n, ['ссылка', 'ссылки', 'ссылок'])}`;
+  }
+  if ((match = key.match(/^(\d+) downloads? added\. Your files will save automatically\.$/))) return locale === 'de' ? `${match[1]} Downloads hinzugefügt. Dateien werden automatisch gespeichert.` : `Добавлено загрузок: ${match[1]}. Файлы сохранятся автоматически.`;
+  if ((match = key.match(/^(\d+) files? saved to your folder$/))) return locale === 'de' ? `${match[1]} Dateien im Ordner gespeichert` : `Файлов сохранено в папку: ${match[1]}`;
+  if ((match = key.match(/^(\d+) active, (\d+) completed, (\d+) need attention\.$/))) return locale === 'de' ? `${match[1]} aktiv, ${match[2]} abgeschlossen, ${match[3]} benötigen Aufmerksamkeit.` : `Активных: ${match[1]}, завершённых: ${match[2]}, требуют внимания: ${match[3]}.`;
+  if ((match = key.match(/^(Available: |Caption tracks: |Cancel |Retry |Save another copy of |Item )(.*)$/))) {
+    const prefixes = { 'Available: ': ['Verfügbar: ', 'Доступно: '], 'Caption tracks: ': ['Untertitelspuren: ', 'Языки субтитров: '], 'Cancel ': ['Abbrechen: ', 'Отменить: '], 'Retry ': ['Erneut versuchen: ', 'Повторить: '], 'Save another copy of ': ['Weitere Kopie speichern: ', 'Сохранить ещё одну копию: '], 'Item ': ['Eintrag ', 'Элемент '] };
+    return prefixes[match[1]][index] + match[2].replace(/ \+ (\d+) more$/, locale === 'de' ? ' + $1 weitere' : ' + ещё $1');
+  }
+  if ((match = key.match(/^(\d+) items$/))) return locale === 'de' ? `${match[1]} Einträge` : `Элементов: ${match[1]}`;
+  if (key.includes(' · ')) {
+    const separator = key.lastIndexOf(' · ');
+    return translateText(key.slice(0, separator), locale) + ' · ' + translateText(key.slice(separator + 3), locale);
+  }
+  if ((match = key.match(/^(.*?) left$/))) return locale === 'de' ? `${match[1]} verbleibend` : `осталось ${match[1]}`;
+  if ((match = key.match(/^(.*?)([↗↙→↓])$/))) return translateText(match[1], locale) + match[2];
+  return text;
+}
+
+export function createTranslator(root, getLocale) {
+  const texts = new WeakMap();
+  const attributes = new WeakMap();
+  function apply() {
+    const locale = getLocale();
+    const walker = root.createTreeWalker(root.body, 4);
+    let node;
+    while ((node = walker.nextNode())) {
+      if (node.parentElement.closest('script,style,pre,.job-title,.job-url,.job-files,.brand')) continue;
+      const previous = texts.get(node);
+      const source = previous && node.nodeValue === previous.last ? previous.source : node.nodeValue;
+      const next = translateText(source, locale);
+      texts.set(node, { source, last: next });
+      if (node.nodeValue !== next) node.nodeValue = next;
+    }
+    for (const element of root.querySelectorAll('[placeholder],[aria-label],[title]')) {
+      const values = attributes.get(element) || {};
+      for (const name of ['placeholder', 'aria-label', 'title']) {
+        if (!element.hasAttribute(name)) continue;
+        const current = element.getAttribute(name);
+        const source = values[name] && current === values[name].last ? values[name].source : current;
+        const next = translateText(source, locale);
+        values[name] = { source, last: next };
+        if (current !== next) element.setAttribute(name, next);
+      }
+      attributes.set(element, values);
+    }
+    root.title = translateText('YTLoad — Your local workspace', locale);
+    root.documentElement.lang = locale;
+  }
+  const observer = new MutationObserver(apply);
+  observer.observe(root.body, { subtree: true, childList: true, characterData: true });
+  return apply;
+}

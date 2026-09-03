@@ -1,0 +1,9 @@
+{
+  "output_root": "~/Downloads/YTLoad",
+  "browser": null,
+  "quality": "best",
+  "archive": true,
+  "sub_langs": "default",
+  "print_commands": false,
+  "sponsorblock": "off"
+}
