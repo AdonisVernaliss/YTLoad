@@ -95,6 +95,7 @@ class PublicSession:
     submissions: deque = field(default_factory=deque)
     inspections: deque = field(default_factory=deque)
     readers: dict[str, int] = field(default_factory=dict)
+    abandoned: bool = False
 
 
 class PublicState:
@@ -148,12 +149,18 @@ class PublicState:
     def session(self, identifier: str):
         with self.lock:
             session = self.sessions.get(identifier)
-            if session:
-                session.touched = time.monotonic()
+            if session is None or session.abandoned:
+                return None
+            session.touched = time.monotonic()
             return session
+
+    def _require_active(self, session):
+        if self.sessions.get(session.identifier) is not session or session.abandoned:
+            raise LookupError('This temporary session expired.')
 
     def allow_inspection(self, session):
         with self.lock:
+            self._require_active(session)
             now = time.monotonic()
             while session.inspections and now - session.inspections[0] >= 60:
                 session.inspections.popleft()
@@ -190,6 +197,7 @@ class PublicState:
         request = prepare_public_request(request)
         expanded = {url for value in request.urls for url in expand_channel_url(value, request.channel_scope)}
         with self.lock:
+            self._require_active(session)
             self._quota(session, request)
             jobs = self.jobs.snapshot()
             if sum(job['id'] in session.jobs and job['status'] in ACTIVE for job in jobs) + len(expanded) > PUBLIC_SESSION_QUEUE or sum(job['status'] in ACTIVE for job in jobs) + len(expanded) > PUBLIC_GLOBAL_QUEUE:
@@ -204,6 +212,7 @@ class PublicState:
             return ids
 
     def owned(self, session, identifier):
+        self._require_active(session)
         if identifier not in session.jobs:
             raise LookupError('This download is not available in your session.')
         return identifier
@@ -235,6 +244,7 @@ class PublicState:
 
     def snapshot(self, session):
         with self.lock:
+            self._require_active(session)
             result = []
             for job in self.jobs.snapshot():
                 if job['id'] not in session.jobs:
@@ -267,13 +277,18 @@ class PublicState:
             monotonic_now = time.monotonic()
             wall_now = time.time()
             jobs = self.jobs.snapshot()
-            active = {job['id'] for job in jobs if job['status'] in ACTIVE}
-            for identifier, session in list(self.sessions.items()):
-                if monotonic_now - session.touched >= SESSION_TTL and not session.readers and not session.jobs.intersection(active):
-                    shutil.rmtree(session.root, ignore_errors=True)
+            indexed = {job['id']: job for job in jobs}
+            for session in self.sessions.values():
+                if not session.abandoned and monotonic_now - session.touched >= SESSION_TTL and not session.readers:
+                    session.abandoned = True
+                if session.abandoned:
                     for job_id in session.jobs:
-                        self.jobs.expire(job_id, PUBLIC_EXPIRED_ERROR)
-                    del self.sessions[identifier]
+                        self.purge.add(job_id)
+                        self.reasons[job_id] = PUBLIC_EXPIRED_ERROR
+                        job = indexed.get(job_id)
+                        if job and job['status'] in ACTIVE:
+                            self.jobs.cancel(job_id)
+            jobs = self.jobs.snapshot()
             total = self.storage_size(self.root)
             low_disk = shutil.disk_usage(self.root).free < PUBLIC_CRITICAL_FREE_BYTES
             for session in self.sessions.values():
@@ -284,11 +299,12 @@ class PublicState:
                         continue
                     if job['status'] in ACTIVE:
                         runtime = job.get('started_at') and wall_now - job['started_at'] >= PUBLIC_JOB_MAX_SECONDS
-                        if over_storage or low_disk or runtime:
-                            reason = ('The public job reached the 3 hour processing limit. Use YTLoad Local for longer work.' if runtime
+                        if session.abandoned or over_storage or low_disk or runtime:
+                            reason = (PUBLIC_EXPIRED_ERROR if session.abandoned
+                                      else 'The public job reached the 3 hour processing limit. Use YTLoad Local for longer work.' if runtime
                                       else 'A public storage safety limit was reached. Use YTLoad Local for larger downloads.')
                             self.reasons[job['id']] = reason
-                            if over_storage or low_disk:
+                            if session.abandoned or over_storage or low_disk:
                                 self.purge.add(job['id'])
                             self.jobs.cancel(job['id'])
                     elif job['status'] in {'completed', 'failed', 'cancelled'} and not session.readers.get(job['id']):
@@ -297,6 +313,18 @@ class PublicState:
                             reason = self.reasons.get(job['id'], PUBLIC_EXPIRED_ERROR) if job['id'] in self.purge else PUBLIC_EXPIRED_ERROR
                             self.jobs.expire(job['id'], reason)
                             self.purge.discard(job['id'])
+            jobs = self.jobs.snapshot()
+            active = {job['id'] for job in jobs if job['status'] in ACTIVE}
+            for identifier, session in list(self.sessions.items()):
+                if not session.abandoned or session.readers or session.jobs.intersection(active):
+                    continue
+                for job in jobs:
+                    if job['id'] in session.jobs and job['status'] in {'completed', 'failed', 'cancelled'}:
+                        self.jobs.expire(job['id'], PUBLIC_EXPIRED_ERROR)
+                        self.purge.discard(job['id'])
+                if session.root.exists():
+                    shutil.rmtree(session.root, ignore_errors=False)
+                del self.sessions[identifier]
             known = {job['id'] for job in self.jobs.snapshot()}
             self.reasons = {key: value for key, value in self.reasons.items() if key in known}
             self.purge.intersection_update(known)
