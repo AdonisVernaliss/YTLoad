@@ -14,6 +14,11 @@ from urllib.parse import parse_qs, unquote, urlsplit
 
 from .jobs import JobManager
 from .models import AppConfig
+from .public_policy import (PUBLIC_COLLECTION_ITEMS, PUBLIC_CRITICAL_FREE_BYTES, PUBLIC_EXPIRED_ERROR,
+                            PUBLIC_FILE_BYTES, PUBLIC_FILE_LIMIT_ERROR, PUBLIC_GLOBAL_QUEUE,
+                            PUBLIC_JOB_MAX_SECONDS, PUBLIC_RESULT_TTL, PUBLIC_SESSION_BYTES,
+                            PUBLIC_SESSION_QUEUE, PUBLIC_SESSION_TTL, PUBLIC_START_FREE_BYTES,
+                            PUBLIC_STORAGE_ERROR, PUBLIC_TOTAL_BYTES)
 from .urls import expand_channel_url
 from .validation import request_from_payload, validate_url
 
@@ -21,10 +26,10 @@ from .validation import request_from_payload, validate_url
 PUBLIC_ARGS = ['--use-extractors', 'youtube.*', '--match-filters', '!is_live',
                '--sleep-interval', '1', '--max-sleep-interval', '3']
 ACTIVE = {'queued', 'running', 'cancelling'}
-FILE_BYTES = 256 * 1024 ** 2
-SESSION_TTL = 3600
-SESSION_BYTES = 1024 ** 3
-TOTAL_BYTES = 4 * 1024 ** 3
+FILE_BYTES = PUBLIC_FILE_BYTES
+SESSION_TTL = PUBLIC_SESSION_TTL
+SESSION_BYTES = PUBLIC_SESSION_BYTES
+TOTAL_BYTES = PUBLIC_TOTAL_BYTES
 
 
 def public_url(value: str) -> str:
@@ -53,7 +58,7 @@ def check_public_file(value):
     path = Path(value)
     if path.stat().st_size > FILE_BYTES:
         path.unlink()
-        raise ValueError('The processed file exceeds the public 256 MB limit. Choose a smaller format or use the local app.')
+        raise ValueError(PUBLIC_FILE_LIMIT_ERROR)
 
 
 def protect_command(request):
@@ -62,20 +67,20 @@ def protect_command(request):
 
 
 def prepare_public_request(request):
-    if request.browser or request.output_root or request.write_comments or request.sponsorblock != 'off' or request.passthrough:
+    if request.browser or request.output_root or request.write_comments or request.sponsorblock != 'off' or request.passthrough or request.limit_rate:
         raise ValueError('Browser sign-in, local folders, comments and SponsorBlock are available in the local app only.')
     if len(request.urls) > 3:
         raise ValueError('Add up to 3 links per public batch.')
     request.urls = list(dict.fromkeys(public_url(url) for url in request.urls))
-    items = request.playlist_items or '1:50'
+    items = request.playlist_items or f'1:{PUBLIC_COLLECTION_ITEMS}'
     match = re.fullmatch(r'([1-9]\d{0,6})(?::([1-9]\d{0,6}))?', items)
-    if not match or not 0 <= int(match[2] or match[1]) - int(match[1]) < 50:
+    if not match or not 0 <= int(match[2] or match[1]) - int(match[1]) < PUBLIC_COLLECTION_ITEMS:
         raise ValueError('Public collections support up to 50 items per section. Use a range such as 1:50 or 51:100.')
     request.playlist_items = items
-    request.max_filesize = request.max_filesize or '256M'
-    request.limit_rate = request.limit_rate or '2M'
-    if byte_limit(request.max_filesize) > 256 * 1024 ** 2 or byte_limit(request.limit_rate) > 2 * 1024 ** 2:
-        raise ValueError('Public downloads allow up to 256 MB per file and 2 MB/s. Use the local app for larger downloads.')
+    request.max_filesize = request.max_filesize or '5G'
+    request.limit_rate = None
+    if byte_limit(request.max_filesize) > PUBLIC_FILE_BYTES:
+        raise ValueError('The public web maximum file size is 5 GB. Choose a lower limit or use YTLoad Local.')
     request.fail_fast = False
     return protect_command(request)
 
@@ -89,7 +94,7 @@ class PublicSession:
     jobs: set[str] = field(default_factory=set)
     submissions: deque = field(default_factory=deque)
     inspections: deque = field(default_factory=deque)
-    readers: int = 0
+    readers: dict[str, int] = field(default_factory=dict)
 
 
 class PublicState:
@@ -117,7 +122,9 @@ class PublicState:
         self.creations = {}
         self.salt = secrets.token_bytes(32)
         self.reasons = {}
-        self.jobs = JobManager(AppConfig(output_root=str(self.root)), prepare_request=protect_command, check_file=check_public_file, hosted=True)
+        self.purge = set()
+        self.jobs = JobManager(AppConfig(output_root=str(self.root)), prepare_request=protect_command, check_file=check_public_file,
+                               hosted=True, before_job=self._before_job, isolated_storage=True)
         self.closed = threading.Event()
         self.monitor = threading.Thread(target=self._monitor, daemon=True, name='temporary-storage')
         self.monitor.start()
@@ -154,20 +161,25 @@ class PublicState:
                 raise ValueError('Please wait before checking more links.')
             session.inspections.append(now)
 
-    def _quota(self, session):
+    def _before_job(self, request):
+        if request.mode in {'video', 'audio'} and shutil.disk_usage(self.root).free < PUBLIC_START_FREE_BYTES:
+            raise ValueError('At least 12 GB of free disk space is required to start a public media download.')
+
+    def _quota(self, session, request=None):
         jobs = self.jobs.snapshot()
-        if sum(job['status'] in ACTIVE for job in jobs) >= 12:
+        if sum(job['status'] in ACTIVE for job in jobs) >= PUBLIC_GLOBAL_QUEUE:
             raise ValueError('The public queue is full. Please wait for a download to finish.')
-        if sum(job['id'] in session.jobs and job['status'] in ACTIVE for job in jobs) >= 4:
-            raise ValueError('You can have up to 4 active public downloads.')
+        if sum(job['id'] in session.jobs and job['status'] in ACTIVE for job in jobs) >= PUBLIC_SESSION_QUEUE:
+            raise ValueError('You can have up to 4 queued or running public downloads.')
         now = time.monotonic()
         while session.submissions and now - session.submissions[0] >= 60:
             session.submissions.popleft()
         if len(session.submissions) >= 6:
             raise ValueError('Please wait before adding more downloads.')
-        size = self.storage_size(self.root)
-        if size >= TOTAL_BYTES or self.storage_size(session.root) >= SESSION_BYTES or shutil.disk_usage(self.root).free < 1024 ** 3:
-            raise ValueError('Temporary storage is full. Save your files and try again later, or use the local app.')
+        if self.storage_size(self.root) >= TOTAL_BYTES or self.storage_size(session.root) >= SESSION_BYTES:
+            raise ValueError(PUBLIC_STORAGE_ERROR)
+        if request is not None:
+            self._before_job(request)
 
     def add(self, session, payload):
         if not isinstance(payload, dict):
@@ -178,9 +190,9 @@ class PublicState:
         request = prepare_public_request(request)
         expanded = {url for value in request.urls for url in expand_channel_url(value, request.channel_scope)}
         with self.lock:
-            self._quota(session)
+            self._quota(session, request)
             jobs = self.jobs.snapshot()
-            if sum(job['id'] in session.jobs and job['status'] in ACTIVE for job in jobs) + len(expanded) > 4 or sum(job['status'] in ACTIVE for job in jobs) + len(expanded) > 12:
+            if sum(job['id'] in session.jobs and job['status'] in ACTIVE for job in jobs) + len(expanded) > PUBLIC_SESSION_QUEUE or sum(job['status'] in ACTIVE for job in jobs) + len(expanded) > PUBLIC_GLOBAL_QUEUE:
                 raise ValueError('There is not enough space in the public queue for this batch.')
             values = asdict(request)
             for key in ('passthrough', 'dry_run', 'print_command'):
@@ -204,6 +216,22 @@ class PublicState:
             session.jobs.update(ids)
             session.submissions.append(time.monotonic())
             return ids
+
+    def begin_file(self, session, identifier, index):
+        with self.lock:
+            self.owned(session, identifier)
+            path = self.jobs.file_path(identifier, index)
+            check_public_file(path)
+            session.readers[identifier] = session.readers.get(identifier, 0) + 1
+            return path
+
+    def end_file(self, session, identifier):
+        with self.lock:
+            count = session.readers.get(identifier, 0)
+            if count <= 1:
+                session.readers.pop(identifier, None)
+            else:
+                session.readers[identifier] = count - 1
 
     def snapshot(self, session):
         with self.lock:
@@ -236,25 +264,42 @@ class PublicState:
 
     def cleanup(self):
         with self.lock:
-            now = time.monotonic()
+            monotonic_now = time.monotonic()
+            wall_now = time.time()
             jobs = self.jobs.snapshot()
             active = {job['id'] for job in jobs if job['status'] in ACTIVE}
             for identifier, session in list(self.sessions.items()):
-                if now - session.touched >= SESSION_TTL and not session.readers and not session.jobs.intersection(active):
+                if monotonic_now - session.touched >= SESSION_TTL and not session.readers and not session.jobs.intersection(active):
                     shutil.rmtree(session.root, ignore_errors=True)
+                    for job_id in session.jobs:
+                        self.jobs.expire(job_id, PUBLIC_EXPIRED_ERROR)
                     del self.sessions[identifier]
             total = self.storage_size(self.root)
-            low_disk = shutil.disk_usage(self.root).free < 1024 ** 3
+            low_disk = shutil.disk_usage(self.root).free < PUBLIC_CRITICAL_FREE_BYTES
             for session in self.sessions.values():
-                over_quota = total >= TOTAL_BYTES or low_disk or self.storage_size(session.root) >= SESSION_BYTES
+                session_size = self.storage_size(session.root)
+                over_storage = total >= TOTAL_BYTES or session_size >= SESSION_BYTES
                 for job in jobs:
-                    if job['id'] not in session.jobs or job['status'] not in ACTIVE:
+                    if job['id'] not in session.jobs:
                         continue
-                    if over_quota or time.time() - job['created'] >= 1200:
-                        self.reasons[job['id']] = 'A public storage or time limit was reached. Use the local app for larger downloads.'
-                        self.jobs.cancel(job['id'])
-            known = {job['id'] for job in jobs}
+                    if job['status'] in ACTIVE:
+                        runtime = job.get('started_at') and wall_now - job['started_at'] >= PUBLIC_JOB_MAX_SECONDS
+                        if over_storage or low_disk or runtime:
+                            reason = ('The public job reached the 3 hour processing limit. Use YTLoad Local for longer work.' if runtime
+                                      else 'A public storage safety limit was reached. Use YTLoad Local for larger downloads.')
+                            self.reasons[job['id']] = reason
+                            if over_storage or low_disk:
+                                self.purge.add(job['id'])
+                            self.jobs.cancel(job['id'])
+                    elif job['status'] in {'completed', 'failed', 'cancelled'} and not session.readers.get(job['id']):
+                        expired = job.get('finished_at') and wall_now - job['finished_at'] >= PUBLIC_RESULT_TTL
+                        if job['id'] in self.purge or expired:
+                            reason = self.reasons.get(job['id'], PUBLIC_EXPIRED_ERROR) if job['id'] in self.purge else PUBLIC_EXPIRED_ERROR
+                            self.jobs.expire(job['id'], reason)
+                            self.purge.discard(job['id'])
+            known = {job['id'] for job in self.jobs.snapshot()}
             self.reasons = {key: value for key, value in self.reasons.items() if key in known}
+            self.purge.intersection_update(known)
             for session in self.sessions.values():
                 session.jobs.intersection_update(known)
 

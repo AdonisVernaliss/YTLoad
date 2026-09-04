@@ -77,3 +77,40 @@ class ConnectionTests(unittest.TestCase):
     def test_preview_rejects_header_injection_before_spawning_a_process(self):
         with self.assertRaises(ValueError):
             inspect_url('https://youtu.be/AbCdEf123_-', user_agent='Mozilla\r\nCookie: secret')
+
+
+class PublicInspectionTests(unittest.TestCase):
+    def test_public_inspection_uses_one_metadata_process_and_returns_sanitized_plans(self):
+        import json
+        import subprocess
+        from unittest.mock import patch
+        from ytloadlib.inspection import inspect_public_url
+
+        url = 'https://r1---sn-example.googlevideo.com/videoplayback?expire=2000000000&sig=private'
+        data = {'title': 'Sample', 'duration': 60, 'http_headers': {'Cookie': 'secret'}, 'formats': [
+            {'format_id': '18', 'url': url, 'protocol': 'https', 'ext': 'mp4', 'height': 360,
+             'vcodec': 'avc1', 'acodec': 'mp4a', 'filesize': 200},
+        ]}
+        completed = subprocess.CompletedProcess([], 0, json.dumps(data), '')
+        with patch('ytloadlib.inspection.subprocess.run', return_value=completed) as execute:
+            result = inspect_public_url('https://youtu.be/AbCdEf123_-')
+        self.assertEqual(execute.call_count, 1)
+        self.assertEqual(result['size_estimates']['source']['480p']['bytes'], 200)
+        self.assertIsNone(result['direct'])
+        encoded = json.dumps(result['size_estimates'])
+        self.assertNotIn('googlevideo', encoded)
+        self.assertNotIn('secret', encoded)
+
+    def test_collection_inspection_does_not_plan_every_item(self):
+        import json
+        import subprocess
+        from unittest.mock import patch
+        from ytloadlib.inspection import inspect_public_url
+
+        completed = subprocess.CompletedProcess([], 0, json.dumps({'_type': 'playlist', 'title': 'Collection', 'entries': []}), '')
+        with patch('ytloadlib.inspection.subprocess.run', return_value=completed) as execute:
+            result = inspect_public_url('https://youtube.com/playlist?list=PL1234567890')
+        self.assertNotIn('--no-playlist', execute.call_args.args[0])
+        self.assertTrue(result['collection_size_notice'])
+        self.assertEqual(result['size_estimates'], {})
+        self.assertIsNone(result['direct'])

@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 
 from .connection import connection_options
-from .formats import quality_selector
+from .formats import video_format_policy
 from .models import AppConfig, DownloadRequest
 from .templates import output_template_for
 from .urls import classify_url
@@ -71,18 +71,10 @@ def build_command(request: DownloadRequest, url: str, config: AppConfig,
     if info.kind == 'video' or request.no_playlist:
         cmd.append('--no-playlist')
     if request.mode == 'video':
-        selector = quality_selector(request.quality or config.quality)
-        compatible = request.video_container == 'mp4' or request.quality == 'compatible'
-        if compatible:
-            height = {'2160p': 2160, '1440p': 1440, '1080p': 1080, '720p': 720, '480p': 480, 'small': 720}.get(request.quality)
-            cap = f'[height<={height}]' if height else ''
-            selector = f'bestvideo[vcodec^=avc1]{cap}+bestaudio[ext=m4a]/best[vcodec^=avc1][ext=mp4]{cap}'
-        container = 'mp4' if compatible else 'mkv'
-        if request.video_container == 'mkv':
-            container = 'mkv'
-        cmd.extend(['-f', selector, '--merge-output-format', container])
-        if request.video_container != 'auto' or compatible:
-            cmd.extend(['--remux-video', container])
+        policy = video_format_policy(request.quality or config.quality, request.video_container)
+        cmd.extend(['-f', policy.selector, '--merge-output-format', policy.container])
+        if request.video_container != 'auto' or policy.compatible:
+            cmd.extend(['--remux-video', policy.container])
     elif request.mode == 'audio':
         cmd.extend(['-f', 'bestaudio/best', '-x'])
         if request.audio_format and request.audio_format != 'best':

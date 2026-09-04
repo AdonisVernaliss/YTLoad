@@ -200,12 +200,15 @@ Run the probe inside WSL2 or a Linux container on Windows. Process-group cleanup
 
 A future stable tunnel can use the same tunnel credentials on one active machine at a time. That production step is outside this experiment.
 
-## Decision gate
+## Production decision
 
-Do not implement Streams/OPFS or ffmpeg.wasm until the cross-IP corpus establishes that both DASH components are repeatedly browser-readable. If DASH pairs are systematically inaccessible, record:
+The completed cross-IP iPhone Safari and same-IP desktop Chrome trials established the production boundary:
 
-```text
-Web-only ffmpeg.wasm merging is not viable with the current direct-media approach.
-```
+- JavaScript could not read the tested progressive, best-video or best-audio googlevideo responses.
+- Chrome DevTools explicitly confirmed missing CORS permission.
+- Native iPhone Safari opened and played a progressive source, while a complete file save remained unconfirmed.
+- A Cloudflare Worker received HTTP 403 for a fresh URL that returned HTTP 206 from the resolver Mac.
 
-Progressive native success can still support a narrower web mode. A future local companion can keep yt-dlp, FFmpeg and media traffic on the user's device. A home server compatibility path remains a separate, bounded fallback and must not use a proxied Cloudflare hostname for large media.
+YTLoad therefore does not use Fetch, OPFS or ffmpeg.wasm for production media transfer and does not use a Worker or R2 media relay. Production may expose a sanitized progressive audio-and-video URL through explicit native navigation as a best-effort option. The hosted yt-dlp/FFmpeg backend remains the compatibility path, and YTLoad Local handles work beyond public limits.
+
+Keep this probe for regression checks and additional browser observations. Do not infer a representative success percentage from the confirmed trials. See [the recorded results](client-direct-results.md).

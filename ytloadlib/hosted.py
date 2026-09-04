@@ -16,9 +16,11 @@ from urllib.parse import parse_qs, quote, urlsplit
 
 from . import __version__
 from .environment import detect_environment
-from .hosted_state import PublicState, check_public_file, prepare_public_request, public_url
-from .inspection import inspect_url
+from .hosted_state import PublicState, prepare_public_request
+from .inspection import inspect_public_url
 from .models import AppConfig
+from .public_policy import (PUBLIC_FILE_BYTES, PUBLIC_JOB_MAX_SECONDS, PUBLIC_RESULT_TTL,
+                            PUBLIC_SESSION_BYTES, PUBLIC_STREAM_TIMEOUT, PUBLIC_TOTAL_BYTES)
 from .web import WorkspaceHandler
 
 
@@ -117,7 +119,7 @@ class PublicHandler(WorkspaceHandler):
         if path is None:
             return
         try:
-            static = {'/', '/app.js', '/style.css', '/icon.svg', '/i18n.mjs', '/appearance.js', '/links.mjs'}
+            static = {'/', '/app.js', '/style.css', '/icon.svg', '/i18n.mjs', '/appearance.js', '/links.mjs', '/hosted-ui.mjs'}
             if path in static:
                 extra = {}
                 name = 'index.html' if path == '/' else path[1:]
@@ -142,7 +144,10 @@ class PublicHandler(WorkspaceHandler):
                     if isinstance(value, dict):
                         value['path'] = None
                 config = asdict(AppConfig(output_root='Temporary server storage'))
-                self._send(200, {'config': config, 'environment': environment, 'version': __version__, 'platform': 'server', 'remote': True, 'hosted': True})
+                self._send(200, {'config': config, 'environment': environment, 'version': __version__, 'platform': 'server', 'remote': True, 'hosted': True,
+                                 'public_policy': {'file_bytes': PUBLIC_FILE_BYTES, 'session_bytes': PUBLIC_SESSION_BYTES,
+                                                   'total_bytes': PUBLIC_TOTAL_BYTES, 'job_max_seconds': PUBLIC_JOB_MAX_SECONDS,
+                                                   'result_ttl_seconds': PUBLIC_RESULT_TTL}})
             elif path == '/api/jobs':
                 self._send(200, self.server.state.snapshot(session))
             elif path.startswith('/api/files/'):
@@ -158,12 +163,10 @@ class PublicHandler(WorkspaceHandler):
         if len(parts) != 5:
             raise LookupError('Unknown file.')
         state = self.server.state
-        with state.lock:
-            state.owned(session, parts[3])
-            file_path = state.jobs.file_path(parts[3], int(parts[4]))
-            check_public_file(file_path)
-            session.readers += 1
+        identifier = parts[3]
+        file_path = state.begin_file(session, identifier, int(parts[4]))
         try:
+            self.connection.settimeout(PUBLIC_STREAM_TIMEOUT)
             with file_path.open('rb') as handle:
                 size = os.fstat(handle.fileno()).st_size
                 start, end = 0, size - 1
@@ -201,8 +204,7 @@ class PublicHandler(WorkspaceHandler):
                     self.wfile.write(data)
                     remaining -= len(data)
         finally:
-            with state.lock:
-                session.readers -= 1
+            state.end_file(session, identifier)
 
     def do_POST(self):
         path = self._access()
@@ -232,7 +234,7 @@ class PublicHandler(WorkspaceHandler):
                 if not self.server.inspection_lock.acquire(blocking=False):
                     raise ValueError('Another link check is in progress. Please wait.')
                 try:
-                    self._send(200, inspect_url(public_url(payload.get('url')), user_agent=payload.get('user_agent'), youtube_client=payload.get('youtube_client', 'auto')))
+                    self._send(200, inspect_public_url(payload.get('url'), user_agent=payload.get('user_agent'), youtube_client=payload.get('youtube_client', 'auto')))
                 finally:
                     self.server.inspection_lock.release()
             else:

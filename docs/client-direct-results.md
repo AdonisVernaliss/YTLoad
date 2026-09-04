@@ -1,49 +1,51 @@
 # Client-direct measurements
 
-## Current conclusion
+## Confirmed observations
 
-**Cross-IP viability is not measured yet.** There are no finalized trials from a supported browser with independently confirmed different resolver and browser egress. The correct result is `not measured`, not 0%.
+These observations establish the production architecture decision. They do not represent a statistically complete corpus and must not be converted into an overall success percentage.
 
-The development control below predates the finalized schema and is retained only as diagnostic history. It does not enter the four rates.
+### Cross-IP iPhone Safari
 
-## Preliminary embedded-browser control
+The yt-dlp resolver and iPhone Safari used different public IP addresses.
 
-Date: 2026-09-03. Resolver: macOS, yt-dlp 2026.08.19, default player client and no browser cookies. Browser: embedded Chromium on the resolver machine. Egress relation was not independently verified.
+| Operation | Observed result |
+| --- | --- |
+| Resolver | Successful |
+| Progressive native open | Successful |
+| Progressive native playback | Successful |
+| Complete native file save | Not confirmed |
+| Progressive JavaScript Range reads | Fetch rejected, 0 bytes |
+| Best video JavaScript read | Fetch rejected, 0 bytes |
+| Best audio JavaScript read | Fetch rejected, 0 bytes |
 
-| Selected role | Format | Protocol / container | Codecs | Dimensions | Reported size | Old sample result |
-| --- | --- | --- | --- | --- | --- | --- |
-| Progressive | 18 | HTTPS / MP4 | H.264 + AAC | 360 × 640 | 5.34 MiB | unobservable Fetch failure |
-| Best video | 616 | HLS / MP4 | VP9, no audio | 1080 × 1920 | Unknown | unsupported protocol |
-| Direct video alternative | 399 | HTTPS / MP4 | AV1, no audio | 1080 × 1920 | 2.99 MiB | unobservable Fetch failure |
-| Best audio | 251-1 | HTTPS / WebM | Opus | Audio only | 0.93 MiB | unobservable Fetch failure |
+The progressive signed source could be opened and played through native Safari navigation. The test did not establish that Safari saved a complete file. JavaScript could not read progressive or separate media bodies.
 
-The old control used a larger first-position range and plain GET. It did not run the required 64 KiB start and offset pair. Six HTTPS requests exposed no response, status or bytes to JavaScript. This cannot be attributed to CORS, IP binding, 403, redirect or transport without additional diagnostics.
+### Same-IP desktop Chrome on macOS
 
-Native navigation was requested, but open, playback and download were not confirmed. No complete stream or merged output was produced. No media passed through the resolver.
+Chrome and the resolver used the same public IP address.
 
-The historical sanitized data is stored in [client-direct-control.json](client-direct-control.json). It contains no source URL, title, signed media URL, cookie, raw IP or raw error.
+| Operation | Observed result |
+| --- | --- |
+| Resolver | Successful |
+| Best video Range request | Fetch rejected, 0 bytes |
+| Best video plain GET | Fetch rejected, 0 bytes |
+| Best video full Fetch | Fetch rejected, 0 bytes |
+| Best audio Range request | Fetch rejected, 0 bytes |
+| Best audio plain GET | Fetch rejected, 0 bytes |
+| DevTools diagnosis | CORS confirmed: the response had no `Access-Control-Allow-Origin` header |
 
-## Required result table
+Same-IP placement did not make the selected googlevideo responses readable to JavaScript.
 
-Fill this table only from exported schema 2 reports:
+### Cloudflare Worker and R2 transport PoC
 
-| Cohort | Resolver | Progressive native download | Progressive Fetch at both ranges | DASH video + audio Fetch |
-| --- | --- | --- | --- | --- |
-| Same IP | Not measured | Not measured | Not measured | Not measured |
-| Cross IP | Not measured | Not measured | Not measured | Not measured |
+A fresh signed googlevideo URL returned HTTP 206 from the Mac and HTTP 403 from a Cloudflare Worker. Adding browser-like User-Agent, Accept, Accept-Language and Referer headers did not change the Worker result.
 
-Required platform evidence:
+## Architecture decision
 
-| Platform | Same-IP | Cross-IP Wi-Fi | Cross-IP mobile |
-| --- | --- | --- | --- |
-| Chrome on macOS | Pending | Pending | Optional |
-| Safari on macOS | Pending | Pending | Optional |
-| Firefox on desktop | Pending | Pending | Optional |
-| Safari on iPhone | Pending | Optional | Pending |
-| Chrome on Android | Pending if available | Optional | Pending if available |
+Production YTLoad does not use JavaScript media Fetch, OPFS or ffmpeg.wasm as its download and merge path. It also does not use a Cloudflare Worker media proxy or Worker-to-R2 transfer.
 
-Use [the exact test procedure](client-direct-probe.md#exact-mac-and-phone-cross-ip-procedure). The page calculates all four rates for same-IP and cross-IP separately after cases are finalized.
+A safe HTTPS progressive stream containing both video and audio may be offered through explicit native browser navigation as a best-effort Direct Web option. Browser save behavior is not guaranteed.
 
-## Decision status
+The public hosted backend remains the compatibility path for yt-dlp download and FFmpeg merge/remux. YTLoad Local remains available for files beyond the public limit, large collections, browser sign-in and unrestricted local operation.
 
-No evidence currently justifies Streams/OPFS or ffmpeg.wasm work. The decision remains open until the representative cross-IP corpus has enough finalized cases across actual target browsers.
+The development probe remains available for regression checks. Its sanitized historical embedded-browser control is stored in [client-direct-control.json](client-direct-control.json). Representative-corpus percentages remain unmeasured.

@@ -1,5 +1,6 @@
 import { createTranslator, translateText } from './i18n.mjs';
 import { parseLinks } from './links.mjs';
+import { directLink, estimateState, selectedEstimate } from './hosted-ui.mjs';
 
 const $ = (id) => document.getElementById(id);
 const token = document.querySelector('meta[name="workspace-token"]').content;
@@ -16,6 +17,8 @@ let preferencesTimer;
 let toastTimer;
 let currentEnvironment;
 let hosted = false;
+let lastInspection;
+let lastInspectionKey;
 const basePath = document.querySelector('meta[name="workspace-base"]').content;
 let lastQueueAnnouncement = '';
 
@@ -87,6 +90,85 @@ function formatTime(seconds) {
   return hours ? `${hours}h ${minutes}m` : minutes ? `${minutes}m ${total % 60}s` : `${total}s`;
 }
 
+function inspectionKey() {
+  return JSON.stringify([urls()[0] || '', $('browser').value || '', $('user-agent').value.trim(), $('youtube-client').value]);
+}
+
+function clearInspection() {
+  lastInspection = null;
+  lastInspectionKey = null;
+  $('preview').replaceChildren();
+  $('preview').hidden = true;
+  $('preview').classList.remove('error');
+}
+
+function estimateSize(estimate) {
+  if (!estimate || typeof estimate.bytes !== 'number') return 'Size unknown';
+  return `${estimate.approximate ? '~' : ''}${formatBytes(estimate.bytes)}`;
+}
+
+function renderHostedInspection(data) {
+  if (data.collection_size_notice) {
+    const notice = document.createElement('p');
+    notice.textContent = 'File sizes vary by item. Each public web result is limited to 5 GB.';
+    $('preview').append(notice);
+    return;
+  }
+  const policy = $('container').value === 'mp4' || $('quality').value === 'compatible' ? 'compatible' : 'source';
+  const estimates = data.size_estimates?.[policy] || {};
+  const heading = document.createElement('h3');
+  heading.className = 'inspection-heading';
+  heading.textContent = 'Available downloads';
+  const list = document.createElement('div');
+  list.className = 'estimate-list';
+  for (const quality of ['best', '2160p', '1440p', '1080p', '720p', '480p', 'small', ...(policy === 'compatible' ? ['compatible'] : [])]) {
+    const estimate = estimates[quality];
+    if (!estimate) continue;
+    const row = document.createElement('div');
+    const state = estimateState(estimate);
+    row.className = 'estimate-row';
+    row.dataset.state = state;
+    const name = document.createElement('strong');
+    name.textContent = optionLabels.get('quality').get(quality) || quality;
+    const size = document.createElement('span');
+    size.textContent = estimateSize(estimate);
+    const status = document.createElement('span');
+    status.textContent = state === 'over' ? 'Public limit exceeded' : state === 'near' ? 'Close to public limit' : state === 'unknown' ? 'YTLoad will enforce the 5 GB limit while processing.' : 'Available';
+    row.append(name, size, status);
+    list.append(row);
+  }
+  $('preview').append(heading, list);
+  const attributes = directLink(data.direct);
+  if (attributes) {
+    const direct = document.createElement('div');
+    direct.className = 'direct-source';
+    const title = document.createElement('strong');
+    title.textContent = 'Direct source available';
+    const detail = document.createElement('p');
+    detail.textContent = [data.direct.height ? `${data.direct.height}p` : '', data.direct.container?.toUpperCase(), estimateSize(data.direct)].filter(Boolean).join(' · ');
+    const link = document.createElement('a');
+    link.className = 'secondary';
+    Object.assign(link, attributes);
+    link.textContent = 'Open direct source';
+    const note = document.createElement('p');
+    note.textContent = 'Opens directly from the source and does not use YTLoad server bandwidth. Browser download behavior may vary. The 5 GB public server limit does not apply to this direct link.';
+    direct.append(title, detail, link, note);
+    $('preview').append(direct);
+  }
+}
+
+function renderInspection(data) {
+  const title = document.createElement('strong');
+  title.textContent = data.title;
+  const details = document.createElement('p');
+  details.textContent = [data.channel, formatTime(data.duration), data.is_collection ? (data.count ? `${data.count} items` : 'Playlist or channel') : data.heights.length ? `Available: ${data.heights.map((height) => height + 'p').join(', ')}` : 'Source quality'].filter(Boolean).join(' · ');
+  const captions = document.createElement('p');
+  captions.textContent = data.is_collection ? 'Caption availability varies by video. The link preview samples up to 5 items.' : data.languages.length ? `Caption tracks: ${data.languages.slice(0, 14).map((language) => language.code).join(', ')}${data.languages.length > 14 ? ` + ${data.languages.length - 14} more` : ''}` : 'No caption tracks were found for this video.';
+  $('preview').replaceChildren(title, details, captions);
+  if (hosted) renderHostedInspection(data);
+  translatePage();
+}
+
 function updateSummary() {
   const mode = selectedMode();
   const includeText = hasTranscript();
@@ -127,8 +209,18 @@ function updateSummary() {
   };
   $('tip-title').textContent = tips[mode][0];
   $('tip-text').textContent = tips[mode][1];
-  $('submit-button').disabled = !ready || submitting;
-  document.querySelector('.mobile-submit').disabled = !ready || submitting;
+  const inspection = lastInspectionKey === inspectionKey() ? lastInspection : null;
+  const estimate = hosted && mode === 'video' ? selectedEstimate(inspection, $('quality').value, $('container').value) : null;
+  const state = estimateState(estimate);
+  const blocked = Boolean(inspection && state === 'over');
+  const selectionNote = $('public-selection-note');
+  selectionNote.hidden = !inspection || mode !== 'video' || state === 'available';
+  selectionNote.dataset.state = state;
+  selectionNote.textContent = state === 'over' ? 'This quality is over the 5 GB public limit. Choose a lower quality or use YTLoad Local.'
+    : state === 'near' ? 'Close to the public limit. The final processed file may still exceed 5 GB.'
+      : state === 'unknown' && inspection ? 'Size unknown. YTLoad will enforce the 5 GB limit while processing.' : '';
+  $('submit-button').disabled = !ready || submitting || blocked;
+  document.querySelector('.mobile-submit').disabled = !ready || submitting || blocked;
 }
 
 function payload(list = urls()) {
@@ -151,7 +243,7 @@ function payload(list = urls()) {
     embed_subs: mode === 'video' && includeText && $('embed-subs').checked,
     channel_scope: $('channel-scope').value, playlist_items: $('items').value.trim() || null,
     date_after: $('date-after').value || null, date_before: $('date-before').value || null,
-    max_filesize: $('max-filesize').value.trim() || null, limit_rate: $('limit-rate').value.trim() || null,
+    max_filesize: $('max-filesize').value.trim() || null, ...(hosted ? {} : {limit_rate: $('limit-rate').value.trim() || null}),
     user_agent: $('user-agent').value.trim() || null, youtube_client: $('youtube-client').value,
     browser: $('browser').value || null, sponsorblock: ['video', 'audio'].includes(mode) ? $('sponsorblock').value : 'off',
     write_thumbnail: $('thumbnail').checked, write_description: $('description').checked,
@@ -187,10 +279,16 @@ $('download-form').addEventListener('input', () => {
   preferencesTimer = setTimeout(savePreferences, 300);
 });
 $('download-form').addEventListener('change', updateSummary);
-$('urls').addEventListener('input', () => { $('preview').hidden = true; });
+$('urls').addEventListener('input', clearInspection);
+for (const id of ['browser', 'user-agent', 'youtube-client']) $(id).addEventListener('input', () => {
+  if (lastInspectionKey && lastInspectionKey !== inspectionKey()) clearInspection();
+});
+for (const id of ['quality', 'container']) $(id).addEventListener('change', () => {
+  if (lastInspection && lastInspectionKey === inspectionKey()) renderInspection(lastInspection);
+});
 $('clear-links').addEventListener('click', () => {
   $('urls').value = '';
-  $('preview').hidden = true;
+  clearInspection();
   updateSummary();
   translatePage();
   $('urls').focus();
@@ -205,7 +303,7 @@ $('download-form').addEventListener('submit', async (event) => {
     submitting = true;
     updateSummary();
     const result = await api('/api/jobs', request);
-    $('preview').hidden = true;
+    clearInspection();
     toast(`${result.ids.length} ${result.ids.length === 1 ? 'download' : 'downloads'} added. Your files will save automatically.`);
     await refreshJobs();
     $('queue-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -217,7 +315,7 @@ $('paste-button').addEventListener('click', async () => {
   try {
     const value = await navigator.clipboard.readText();
     $('urls').value += ($('urls').value.trim() ? '\n' : '') + value.trim();
-    $('preview').hidden = true;
+    clearInspection();
     updateSummary();
   } catch { toast('Click the link field and press Ctrl+V or ⌘V to paste.'); $('urls').focus(); }
 });
@@ -229,7 +327,7 @@ $('import-file').addEventListener('change', async () => {
   try {
     const lines = (await file.text()).split(/\r?\n/).map((line) => line.trim()).filter((line) => line && !line.startsWith('#'));
     $('urls').value += ($('urls').value.trim() ? '\n' : '') + lines.join('\n');
-    $('preview').hidden = true;
+    clearInspection();
     updateSummary();
   } catch { toast('This file could not be read. Paste its links directly into the field.'); }
   $('import-file').value = '';
@@ -238,6 +336,7 @@ $('import-file').addEventListener('change', async () => {
 $('inspect-button').addEventListener('click', async () => {
   const url = urls()[0];
   if (!url || inspecting) return;
+  const key = inspectionKey();
   inspecting = true;
   $('preview').hidden = false;
   $('preview').classList.remove('error');
@@ -245,15 +344,13 @@ $('inspect-button').addEventListener('click', async () => {
   updateSummary();
   try {
     const data = await api('/api/inspect', { url, browser: $('browser').value || null, user_agent: $('user-agent').value.trim() || null, youtube_client: $('youtube-client').value }, 50000);
-    if (urls()[0] !== url) return;
-    const title = document.createElement('strong');
-    title.textContent = data.title;
-    const details = document.createElement('p');
-    details.textContent = [data.channel, formatTime(data.duration), data.is_collection ? (data.count ? `${data.count} items` : 'Playlist or channel') : data.heights.length ? `Available: ${data.heights.map((height) => height + 'p').join(', ')}` : 'Source quality'].filter(Boolean).join(' · ');
-    const captions = document.createElement('p');
-    captions.textContent = data.is_collection ? 'Caption availability varies by video. The link preview samples up to 5 items.' : data.languages.length ? `Caption tracks: ${data.languages.slice(0, 14).map((language) => language.code).join(', ')}${data.languages.length > 14 ? ` + ${data.languages.length - 14} more` : ''}` : 'No caption tracks were found for this video.';
-    $('preview').replaceChildren(title, details, captions);
+    if (inspectionKey() !== key) return;
+    lastInspection = data;
+    lastInspectionKey = key;
+    renderInspection(data);
   } catch (error) {
+    lastInspection = null;
+    lastInspectionKey = null;
     $('preview').classList.add('error');
     $('preview').textContent = error.message;
   } finally { inspecting = false; updateSummary(); }
@@ -396,9 +493,9 @@ function renderJob(job, entry) {
   node.querySelector('.job-title').title = job.title;
   node.querySelector('.job-url').textContent = job.url;
   node.querySelector('.job-icon').textContent = symbols[job.mode];
-  node.querySelector('.job-status').textContent = { queued: 'Queued', running: 'Downloading', cancelling: 'Stopping…', completed: job.files.length ? 'Saved' : 'Finished', failed: 'Needs attention', cancelled: 'Cancelled' }[job.status];
+  node.querySelector('.job-status').textContent = job.result_expired ? 'Expired' : { queued: 'Queued', running: 'Downloading', cancelling: 'Stopping…', completed: job.files.length ? 'Saved' : 'Finished', failed: 'Needs attention', cancelled: 'Cancelled' }[job.status];
   const button = node.querySelector('.job-button');
-  button.hidden = ['completed', 'cancelling'].includes(job.status);
+  button.hidden = job.result_expired || ['completed', 'cancelling'].includes(job.status);
   button.textContent = ['queued', 'running'].includes(job.status) ? 'Cancel' : 'Retry same settings';
   button.setAttribute('aria-label', `${button.textContent} ${job.title}`);
   const progress = node.querySelector('.job-progress');
@@ -414,12 +511,13 @@ function renderJob(job, entry) {
     else if (typeof downloaded === 'number') parts.push(`${formatBytes(downloaded)}${typeof total === 'number' ? ' / ' + formatBytes(total) : ''}`);
     else parts.push('Connecting and reading video information…');
     if (typeof job.progress.index === 'number') parts.push(`Item ${job.progress.index}${typeof job.progress.count === 'number' ? ' / ' + job.progress.count : ''}`);
-  } else if (job.status === 'completed') parts.push(job.files.length ? `${job.files.length} ${job.files.length === 1 ? 'file' : 'files'} saved to your folder` : 'No new files. Items may already exist or be excluded by filters.');
+  } else if (job.result_expired) parts.push('Temporary file expired. Run the download again.');
+  else if (job.status === 'completed') parts.push(job.files.length ? `${job.files.length} ${job.files.length === 1 ? 'file' : 'files'} saved to your folder` : 'No new files. Items may already exist or be excluded by filters.');
   else if (job.status === 'queued') parts.push('Waiting for the previous download');
   else if (job.status === 'cancelled') parts.push('Partial media files are kept for a retry');
   progressText.children[0].textContent = parts.join(' · ');
   progressText.children[1].textContent = job.status === 'running' && job.progress.status !== 'finished' ? [formatBytes(job.progress.speed) ? formatBytes(job.progress.speed) + '/s' : '', formatTime(job.progress.eta) ? formatTime(job.progress.eta) + ' left' : ''].filter(Boolean).join(' · ') : '';
-  node.querySelector('.job-error').hidden = !job.error || job.status === 'cancelled';
+  node.querySelector('.job-error').hidden = !job.error || (job.status === 'cancelled' && !job.result_expired);
   node.querySelector('.job-error-message').textContent = job.error || '';
   node.querySelector('.job-error-detail').textContent = job.error_detail || '';
   renderRecovery(job, node);
@@ -453,7 +551,7 @@ async function refreshJobs() {
   $('queue-count').textContent = data.length;
   const active = data.filter((job) => ['queued', 'running', 'cancelling'].includes(job.status)).length;
   $('nav-count').textContent = active || data.length;
-  const announcement = `${active} active, ${data.filter((job) => job.status === 'completed').length} completed, ${data.filter((job) => job.status === 'failed').length} need attention.`;
+  const announcement = `${active} queued or running, ${data.filter((job) => job.status === 'completed').length} completed, ${data.filter((job) => job.status === 'failed').length} need attention.`;
   if (lastQueueAnnouncement !== announcement) { $('queue-status').textContent = announcement; lastQueueAnnouncement = announcement; }
   $('connection').classList.remove('offline');
   $('connection').lastChild.textContent = hosted ? 'Public workspace' : 'Local workspace';
@@ -477,6 +575,7 @@ async function initialize() {
     currentEnvironment = data.environment;
     hosted = Boolean(data.hosted);
     if (hosted) {
+      $('public-policy').hidden = false;
       $('hosted-storage-note').hidden = false;
       document.querySelector('.local-note').hidden = true;
       document.querySelector('label[for="output"]').textContent = 'Storage';
@@ -487,8 +586,9 @@ async function initialize() {
       $('browser').closest('label').hidden = true;
       $('sponsorblock').closest('label').hidden = true;
       $('comments').closest('label').hidden = true;
-      $('max-filesize').placeholder = 'Up to 256M';
-      $('limit-rate').placeholder = 'Up to 2M';
+      $('max-filesize').placeholder = 'Up to 5G';
+      $('limit-rate').value = '';
+      $('limit-rate-row').hidden = true;
       $('items').placeholder = '1:50 · or 51:100';
       $('connection').lastChild.textContent = 'Public workspace';
     }

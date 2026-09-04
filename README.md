@@ -444,25 +444,34 @@ Local configs, cookies, keys, downloads, logs, caches and build output are exclu
 
 Source availability, authentication, regional restrictions and rate limits remain outside the app's control. It does not remove DRM. Only download media you have permission to save.
 
-Responsive layouts have been checked at widths from 320 to 1920 pixels. This does not certify every device: physical iPhone/Safari behavior and native Windows execution have not yet been verified. Browser download handling and available storage vary by device.
+Responsive layouts have been checked at widths from 320 to 1920 pixels. Cross-IP iPhone Safari testing confirmed native progressive open and playback, but not a complete file save. Native Windows execution has not yet been verified. Browser download handling and available storage vary by device.
 
 ## Hosted mode
 
-YTLoad includes a separate public backend for Linux and macOS. It uses anonymous browser sessions: each session has its own queue view, CSRF token, files and temporary storage. It accepts direct YouTube video, playlist and channel links. Other supported sites, local destinations, browser cookies, comments and SponsorBlock remain available in local mode.
+YTLoad includes a separate public backend for Linux and macOS with three ordered paths:
+
+1. **Direct Web, when available.** Check link may expose one safe HTTPS progressive source containing both video and audio. The visitor opens it through native browser navigation, so media does not use YTLoad server bandwidth. Browser saving is best-effort and is never presented as guaranteed.
+2. **Public Hosted Web.** yt-dlp downloads on the host and FFmpeg merges or remuxes when required. The final media file has a hard 5 GiB limit.
+3. **YTLoad Local.** Local Web and CLI remain unrestricted by the public 5 GiB policy and support browser sign-in, advanced options and larger work.
+
+Public sessions keep separate queue views, CSRF tokens, files and temporary storage. Hosted mode accepts direct YouTube video, playlist and channel links. Other supported sites, local destinations, browser cookies, comments and SponsorBlock remain available in local mode.
 
 | Limit | Public backend |
 | --- | --- |
 | Links per batch | 3 |
-| Active jobs | 4 per session, 12 globally; one download runs at a time |
+| Queue | 4 queued or running jobs per session, 12 globally; exactly one yt-dlp/FFmpeg job runs at a time |
 | Collection items | 50 per section; use `51:100` for the next batch |
-| Media size and speed | 256 MiB per file, up to 2 MiB/s |
-| Temporary storage | 1 GiB per session, 4 GiB globally |
-| Job lifetime | 20 minutes, including queue time |
-| Retention | 1 hour without browser activity; active transfers are retained |
+| Final media file | 5 GiB per result; smaller user limits are accepted |
+| Temporary storage | 12 GiB per session, 20 GiB globally |
+| Job runtime | 3 hours after execution starts |
+| Result retention | About 1 hour after completion, failure or cancellation, independent of page polling |
+| Disk reserve | About 12 GiB required before a media job; running work stops near 4 GiB free |
 
-Storage and time limits are checked every two seconds; they are application safeguards, not filesystem quotas. Run the backend as a dedicated unprivileged user, give it a separate storage volume with an operating-system quota, and apply CPU/memory limits through your process supervisor. The backend stops jobs when storage is full or less than 1 GiB of free disk space remains.
+The public backend does not apply an artificial default download-speed limit. Storage, time and disk checks are application safeguards, not filesystem quotas. Run the backend as a dedicated unprivileged user, give it a separate storage volume with an operating-system quota, and apply CPU and memory limits through the process supervisor.
 
-The queue is kept in memory. Restarting clears sessions and their previous temporary files. A storage lock prevents two backend instances from using the same directory. Do not share storage between replicas or expect jobs to survive restarts. Users should save completed files to their device before closing the session.
+Completed, failed and cancelled job data is isolated so expired temporary files can be removed without affecting another job. An active HTTP file reader postpones expiry until its response finishes. Public file responses stream bounded chunks and support byte ranges for interrupted-download resume. A storage-triggered cancellation removes its temporary job data; ordinary failed and cancelled partials remain retryable until expiry.
+
+The queue is kept in memory. Restarting clears sessions and removes earlier temporary session directories when the backend starts. A storage lock prevents two backend instances from using the same directory. Do not share storage between replicas or expect jobs to survive restarts.
 
 ### Run behind an HTTPS reverse proxy
 
@@ -477,7 +486,7 @@ python3 ytload.py --serve \
   --port 8765
 ```
 
-The HTTPS proxy must forward `/ytload/` and its subpaths to `http://127.0.0.1:8765`, preserving the path and streaming responses. Set these headers at the proxy, replacing any client-supplied values:
+The HTTPS proxy must forward `/ytload/` and its subpaths to `http://127.0.0.1:8765`, preserve the path, stream long responses and support multi-gigabyte bodies and byte ranges. Set these headers at the proxy, replacing any client-supplied values:
 
 | Header | Value |
 | --- | --- |
@@ -488,7 +497,7 @@ The HTTPS proxy must forward `/ytload/` and its subpaths to `http://127.0.0.1:87
 
 Keep the backend bound to loopback or a private container network. Configure HTTPS, request-rate and connection limits at the proxy. Restrict backend egress to public destinations, including redirects and DNS changes. Do not mount browser profiles, home directories or credentials into its runtime. The public API has no cookie-upload or browser-sign-in endpoint.
 
-Public file downloads require the owning session and support byte ranges for retrying interrupted transfers. Cookies use `Secure`, `HttpOnly` and `SameSite=Strict`; opening the backend over plain HTTP is not a supported public deployment.
+Application support for 5 GiB files does not prove that a deployed proxy path permits them. A production release requires an origin/reverse-proxy path whose provider terms and technical limits allow long multi-gigabyte streaming responses and Range resume. A Cloudflare Worker media proxy, Worker-to-R2 pipeline and R2 media staging are not part of this architecture. Do not advertise the 5 GiB hosted path as production-ready until that transport gate is verified.
 
 ### Dependency updates
 
@@ -521,7 +530,7 @@ Tests cover request validation, command construction, caption conversion, proces
 
 A separate development-only resolver tests Source → Browser access after yt-dlp resolution on another IP. It does not change the normal downloader or proxy media. Run `python3 -m ytloadlib.direct_probe` from the checkout on macOS/Linux, or inside WSL2 on Windows. Keep its connection link private.
 
-See the [setup and cross-IP test procedure](docs/client-direct-probe.md), [24-case corpus worksheet](docs/client-direct-corpus.csv), and [measured results and limitations](docs/client-direct-results.md). Four same-IP and cross-IP rates are reported separately; no real cross-IP rate has been established yet.
+See the [setup and regression procedure](docs/client-direct-probe.md), [24-case corpus worksheet](docs/client-direct-corpus.csv), and [confirmed measurements and architecture decision](docs/client-direct-results.md). The observed iPhone and Chrome trials rule out JavaScript Fetch plus ffmpeg.wasm as the production media path; no representative-corpus percentage is claimed.
 
 ### Portable build
 

@@ -17,7 +17,7 @@ class HostedPolicyTests(unittest.TestCase):
         for extra in ({'browser': 'chrome'}, {'output_root': '/private'}, {'write_comments': True},
                       {'urls': ['http://127.0.0.1/video']}, {'urls': ['https://youtube.com.attacker.test/watch?v=AbCdEf123_-']},
                       {'urls': ['https://www.youtube.com/redirect?q=http://127.0.0.1']}, {'playlist_items': '1:50000'},
-                      {'playlist_items': '-1'}, {'max_filesize': '2G'}):
+                      {'playlist_items': '-1'}, {'max_filesize': '6G'}, {'limit_rate': '2M'}):
             with self.subTest(extra=extra), self.assertRaises(ValueError):
                 request = request_from_payload({'urls': ['https://youtu.be/AbCdEf123_-'], **extra}, AppConfig(output_root='/data'))
                 if 'output_root' not in extra:
@@ -30,9 +30,28 @@ class HostedPolicyTests(unittest.TestCase):
         request.output_root = None
         result = prepare_public_request(request)
         self.assertEqual(result.playlist_items, '1:50')
-        self.assertEqual(result.max_filesize, '256M')
+        self.assertEqual(result.max_filesize, '5G')
+        self.assertIsNone(result.limit_rate)
+        from ytloadlib.command import build_command
+        command = build_command(result, result.urls[0], AppConfig(output_root='/data'))
+        self.assertEqual(command[command.index('--max-filesize') + 1], '5G')
+        self.assertNotIn('--limit-rate', command)
         self.assertEqual(result.passthrough[result.passthrough.index('--use-extractors') + 1], 'youtube.*')
         self.assertIsNone(result.browser)
+
+    def test_public_file_limit_boundary_does_not_change_local_commands(self):
+        from ytloadlib.command import build_command
+        from ytloadlib.hosted import prepare_public_request
+        from ytloadlib.public_policy import PUBLIC_FILE_BYTES
+        accepted = request_from_payload({'urls': ['https://youtu.be/AbCdEf123_-'], 'max_filesize': '5G'}, AppConfig(output_root='/data'))
+        accepted.output_root = None
+        self.assertEqual(prepare_public_request(accepted).max_filesize, '5G')
+        self.assertEqual(PUBLIC_FILE_BYTES, 5 * 1024 ** 3)
+        local = request_from_payload({'urls': ['https://youtu.be/AbCdEf123_-'], 'max_filesize': '6G', 'limit_rate': '5M'}, AppConfig(output_root='/data'))
+        command = build_command(local, local.urls[0], AppConfig(output_root='/data'))
+        self.assertIn('6G', command)
+        self.assertIn('5M', command)
+
 
 
 class HostedServerTests(unittest.TestCase):
@@ -90,12 +109,29 @@ class HostedServerTests(unittest.TestCase):
         data = json.loads(body)
         self.assertEqual(status, 200)
         self.assertTrue(data['hosted'])
+        self.assertEqual(data['public_policy']['file_bytes'], 5 * 1024 ** 3)
+        self.assertEqual(data['public_policy']['session_bytes'], 12 * 1024 ** 3)
+        self.assertEqual(data['public_policy']['result_ttl_seconds'], 60 * 60)
         self.assertIsNone(data['config']['browser'])
         self.assertEqual(data['environment']['browsers'], [])
         self.assertNotIn(str(Path.home()).encode(), body)
         self.assertNotIn(self.temp.name.encode(), body)
         self.assertEqual(self.request('GET', '/ytload/links.mjs', cookie=cookie)[0], 200)
+        self.assertEqual(self.request('GET', '/ytload/hosted-ui.mjs', cookie=cookie)[0], 200)
         self.assertEqual(self.request('POST', '/ytload/api/choose-folder', {}, cookie, token)[0], 404)
+
+    def test_public_inspection_returns_ephemeral_direct_url_without_job_persistence(self):
+        cookie, token = self.session()
+        media = 'https://r1---sn-example.googlevideo.com/videoplayback?expire=2000000000&sig=temporary'
+        response = {'title': 'Sample', 'size_estimates': {}, 'collection_size_notice': False,
+                    'public_limit_bytes': 5 * 1024 ** 3, 'direct': {'url': media, 'height': 360, 'container': 'mp4', 'bytes': 200, 'approximate': False}}
+        with patch('ytloadlib.hosted.inspect_public_url', return_value=response):
+            status, headers, body = self.request('POST', '/ytload/api/inspect', {'url': 'https://youtu.be/AbCdEf123_-'}, cookie, token)
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body)['direct']['url'], media)
+        self.assertEqual(headers['Cache-Control'], 'no-store')
+        jobs = self.request('GET', '/ytload/api/jobs', cookie=cookie, token=token)[2]
+        self.assertNotIn(media.encode(), jobs)
 
     def test_sessions_cannot_list_download_cancel_or_retry_each_others_jobs(self):
         from ytloadlib.runner import DownloadRunResult
@@ -124,7 +160,17 @@ class HostedServerTests(unittest.TestCase):
         status, headers, body = self.request('GET', path, cookie=first, Range='bytes=2-5')
         self.assertEqual((status, body), (206, b'2345'))
         self.assertEqual(headers['Content-Range'], 'bytes 2-5/10')
+        self.assertEqual(headers['Content-Length'], '4')
+        self.assertEqual(headers['Accept-Ranges'], 'bytes')
+        self.assertEqual(headers['Cache-Control'], 'private, no-store')
+        self.assertIn('attachment;', headers['Content-Disposition'])
         self.assertEqual(self.request('GET', path, cookie=first, Range='bytes=99-')[0], 416)
+        self.assertEqual(next(iter(self.server.state.sessions.values())).readers, {})
+        self.server.state.jobs.expire(identifier, 'expired')
+        self.assertEqual(self.request('GET', path, cookie=first)[0], 404)
+        expired = json.loads(self.request('GET', '/ytload/api/jobs', cookie=first, token=first_token)[2])[0]
+        self.assertTrue(expired['result_expired'])
+        self.assertEqual(expired['files'], [])
 
     def test_session_expiry_removes_files_and_access(self):
         cookie, token = self.session()
@@ -166,6 +212,14 @@ class HostedLifecycleTests(unittest.TestCase):
             finally:
                 manager.close()
 
+    def test_file_at_public_limit_remains_available(self):
+        from ytloadlib.hosted_state import check_public_file
+        with tempfile.TemporaryDirectory() as directory, patch('ytloadlib.hosted_state.FILE_BYTES', 4):
+            path = Path(directory) / 'limit.mp4'
+            path.write_bytes(b'1234')
+            check_public_file(path)
+            self.assertTrue(path.exists())
+
     def test_processed_files_cannot_exceed_public_limit(self):
         from ytloadlib.hosted_state import PublicState
         from ytloadlib.runner import DownloadRunResult
@@ -184,7 +238,8 @@ class HostedLifecycleTests(unittest.TestCase):
                         break
                     time.sleep(.01)
                 self.assertEqual(jobs[0]['status'], 'failed')
-                self.assertFalse((session.root / 'large.wav').exists())
+                self.assertEqual(jobs[0]['error'], 'The processed file exceeds the 5 GB public web limit. Choose a lower quality or use YTLoad Local.')
+                self.assertFalse(any(session.root.rglob('large.wav')))
                 self.assertEqual(jobs[0]['files'], [])
             finally:
                 state.close()

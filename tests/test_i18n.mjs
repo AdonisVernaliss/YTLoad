@@ -22,6 +22,9 @@ test('dynamic download status and limits are localized', () => {
   assert.equal(translateText('Up to Full HD · 1080p · original codecs', 'de'), 'Bis zu Full HD · 1080p · Originalcodecs');
   assert.equal(translateText('Small file · up to 720p · MKV', 'ru'), 'Небольшой файл · до 720p · MKV');
   assert.equal(translateText('Retry Sample', 'de'), 'Erneut versuchen: Sample');
+  assert.equal(translateText('Public limit exceeded', 'ru'), 'Превышен публичный лимит');
+  assert.equal(translateText('Temporary file expired. Run the download again.', 'de'), 'Temporäre Datei abgelaufen. Starten Sie den Download erneut.');
+  assert.equal(translateText('Open direct source', 'ru'), 'Открыть напрямую');
 });
 
 test('filenames, language codes and unknown content remain intact', () => {

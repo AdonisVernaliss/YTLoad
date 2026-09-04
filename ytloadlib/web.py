@@ -107,7 +107,7 @@ class WorkspaceHandler(BaseHTTPRequestHandler):
                     self._send(403, {'error': 'Invalid connection key.'})
                     return
                 self._send(303, {}, extra={'Location': '/', 'Set-Cookie': f'ytload-session={self.server.session_key}; Path=/; HttpOnly; SameSite=Strict'})
-            elif path in {'/', '/app.js', '/style.css', '/icon.svg', '/i18n.mjs', '/appearance.js', '/links.mjs'}:
+            elif path in {'/', '/app.js', '/style.css', '/icon.svg', '/i18n.mjs', '/appearance.js', '/links.mjs', '/hosted-ui.mjs'}:
                 name = 'index.html' if path == '/' else path[1:]
                 data = files('ytloadlib').joinpath('static', name).read_bytes()
                 if path == '/':

@@ -49,6 +49,22 @@ class WorkspaceTests(unittest.TestCase):
             finally:
                 manager.close()
 
+    def test_local_history_still_prunes_completed_jobs(self):
+        from ytloadlib.jobs import JobManager
+        from ytloadlib.runner import DownloadRunResult
+        result = DownloadRunResult(True, 0, '', 1, None, (), ())
+        with tempfile.TemporaryDirectory() as directory, patch('ytloadlib.jobs.run_download', return_value=result):
+            manager = JobManager(AppConfig(output_root=directory))
+            try:
+                for offset, count in ((0, 100), (100, 100), (200, 1)):
+                    manager.add({'urls': [f'https://example.com/{index}' for index in range(offset, offset + count)]})
+                    deadline = time.monotonic() + 3
+                    while time.monotonic() < deadline and any(job['status'] != 'completed' for job in manager.snapshot()):
+                        time.sleep(.01)
+                self.assertEqual(len(manager.snapshot()), 200)
+            finally:
+                manager.close()
+
     def test_lan_access_requires_connection_key_and_session(self):
         from ytloadlib.web import create_server
         with tempfile.TemporaryDirectory() as directory, patch('ytloadlib.web.lan_address', return_value='127.0.0.1'):
