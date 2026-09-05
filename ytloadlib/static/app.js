@@ -7,6 +7,7 @@ const token = document.querySelector('meta[name="workspace-token"]').content;
 const modeNames = { video: 'Video + audio', audio: 'Audio only', subs: 'Transcript only', metadata: 'Video details' };
 const symbols = { video: '▷', audio: '♫', subs: 'Tt', metadata: 'ⓘ' };
 const jobs = new Map();
+const activeStatuses = new Set(['queued', 'running', 'waiting_delivery', 'uploading', 'cancelling', 'expiring']);
 const optionLabels = new Map([...document.querySelectorAll('select')].map((select) => [select.id, new Map([...select.options].map((option) => [option.value, option.textContent]))]));
 let locale = document.documentElement.lang || 'en';
 const translatePage = createTranslator(document, () => locale);
@@ -17,6 +18,7 @@ let preferencesTimer;
 let toastTimer;
 let currentEnvironment;
 let hosted = false;
+let hostedDelivery = 'local';
 let lastInspection;
 let lastInspectionKey;
 const basePath = document.querySelector('meta[name="workspace-base"]').content;
@@ -474,7 +476,7 @@ function createJob(job) {
     const button = node.querySelector('.job-button');
     button.disabled = true;
     try {
-      await api(['queued', 'running'].includes(node.dataset.status) ? '/api/cancel' : '/api/retry', { id: job.id });
+      await api(activeStatuses.has(node.dataset.status) ? '/api/cancel' : '/api/retry', { id: job.id });
       await refreshJobs();
     } catch (error) { toast(error.message); }
     finally { button.disabled = false; }
@@ -493,16 +495,16 @@ function renderJob(job, entry) {
   node.querySelector('.job-title').title = job.title;
   node.querySelector('.job-url').textContent = job.url;
   node.querySelector('.job-icon').textContent = symbols[job.mode];
-  node.querySelector('.job-status').textContent = job.result_expired ? 'Expired' : { queued: 'Queued', running: 'Downloading', cancelling: 'Stopping…', completed: job.files.length ? 'Saved' : 'Finished', failed: 'Needs attention', cancelled: 'Cancelled' }[job.status];
+  node.querySelector('.job-status').textContent = job.result_expired ? 'Expired' : { queued: 'Queued', running: 'Downloading', waiting_delivery: 'Waiting for delivery', uploading: 'Publishing', cancelling: 'Stopping\u2026', expiring: 'Expiring\u2026', ready: 'Ready', completed: job.files.length ? 'Saved' : 'Finished', failed: 'Needs attention', cancelled: 'Cancelled' }[job.status];
   const button = node.querySelector('.job-button');
-  button.hidden = job.result_expired || ['completed', 'cancelling'].includes(job.status);
-  button.textContent = ['queued', 'running'].includes(job.status) ? 'Cancel' : 'Retry same settings';
+  button.hidden = job.result_expired || ['completed', 'ready', 'cancelling', 'expiring'].includes(job.status);
+  button.textContent = activeStatuses.has(job.status) ? 'Cancel' : 'Retry same settings';
   button.setAttribute('aria-label', `${button.textContent} ${job.title}`);
   const progress = node.querySelector('.job-progress');
   const total = job.progress.total;
   const downloaded = job.progress.downloaded;
-  progress.hidden = !['running', 'cancelling'].includes(job.status);
-  if (typeof total === 'number' && total > 0 && typeof downloaded === 'number') progress.value = Math.min(100, downloaded / total * 100);
+  progress.hidden = !['running', 'uploading', 'cancelling', 'expiring'].includes(job.status);
+  if (job.status === 'running' && typeof total === 'number' && total > 0 && typeof downloaded === 'number') progress.value = Math.min(100, downloaded / total * 100);
   else progress.removeAttribute('value');
   const progressText = node.querySelector('.job-progress-text');
   const parts = [];
@@ -512,9 +514,12 @@ function renderJob(job, entry) {
     else parts.push('Connecting and reading video information…');
     if (typeof job.progress.index === 'number') parts.push(`Item ${job.progress.index}${typeof job.progress.count === 'number' ? ' / ' + job.progress.count : ''}`);
   } else if (job.result_expired) parts.push('Temporary file expired. Run the download again.');
+  else if (job.status === 'waiting_delivery') parts.push('Waiting for guarded cloud capacity');
+  else if (job.status === 'uploading') parts.push('Publishing securely for browser download\u2026');
+  else if (job.status === 'ready') parts.push('Ready for download for about 1 hour');
   else if (job.status === 'completed') parts.push(job.files.length ? `${job.files.length} ${job.files.length === 1 ? 'file' : 'files'} saved to your folder` : 'No new files. Items may already exist or be excluded by filters.');
   else if (job.status === 'queued') parts.push('Waiting for the previous download');
-  else if (job.status === 'cancelled') parts.push('Partial media files are kept for a retry');
+  else if (job.status === 'cancelled') parts.push(job.delivery_status ? 'Cloud publication was cancelled. The local result is available for retry.' : 'Partial media files are kept for a retry');
   progressText.children[0].textContent = parts.join(' · ');
   progressText.children[1].textContent = job.status === 'running' && job.progress.status !== 'finished' ? [formatBytes(job.progress.speed) ? formatBytes(job.progress.speed) + '/s' : '', formatTime(job.progress.eta) ? formatTime(job.progress.eta) + ' left' : ''].filter(Boolean).join(' · ') : '';
   node.querySelector('.job-error').hidden = !job.error || (job.status === 'cancelled' && !job.result_expired);
@@ -524,7 +529,7 @@ function renderJob(job, entry) {
   node.querySelector('.job-warnings').hidden = !job.warnings.length;
   node.querySelector('.job-warnings').textContent = job.warnings.join('\n');
   node.querySelector('.job-log pre').textContent = job.logs.join('\n') || 'No activity yet.';
-  const fileKey = JSON.stringify(job.files);
+  const fileKey = JSON.stringify([job.files, job.file_urls]);
   if (fileKey !== entry.fileKey) {
     entry.fileKey = fileKey;
     node.querySelector('.job-files').replaceChildren(...job.files.map((path, index) => {
@@ -532,7 +537,7 @@ function renderJob(job, entry) {
       const name = path.split(/[\\/]/).at(-1);
       link.textContent = `↓ ${name}`;
       link.title = 'Save another copy of ' + name;
-      link.href = `${basePath}/api/files/${job.id}/${index}?token=${encodeURIComponent(token)}`;
+      link.href = job.file_urls?.[index] || `${basePath}/api/files/${job.id}/${index}?token=${encodeURIComponent(token)}`;
       link.download = name;
       return link;
     }));
@@ -549,9 +554,9 @@ async function refreshJobs() {
     renderJob(job, jobs.get(job.id));
   }
   $('queue-count').textContent = data.length;
-  const active = data.filter((job) => ['queued', 'running', 'cancelling'].includes(job.status)).length;
+  const active = data.filter((job) => activeStatuses.has(job.status)).length;
   $('nav-count').textContent = active || data.length;
-  const announcement = `${active} queued or running, ${data.filter((job) => job.status === 'completed').length} completed, ${data.filter((job) => job.status === 'failed').length} need attention.`;
+  const announcement = `${active} active, ${data.filter((job) => ['completed', 'ready'].includes(job.status)).length} completed, ${data.filter((job) => job.status === 'failed').length} need attention.`;
   if (lastQueueAnnouncement !== announcement) { $('queue-status').textContent = announcement; lastQueueAnnouncement = announcement; }
   $('connection').classList.remove('offline');
   $('connection').lastChild.textContent = hosted ? 'Public workspace' : 'Local workspace';
@@ -574,6 +579,7 @@ async function initialize() {
     const data = await api('/api/config');
     currentEnvironment = data.environment;
     hosted = Boolean(data.hosted);
+    hostedDelivery = data.delivery === 'r2' ? 'r2' : 'local';
     if (hosted) {
       $('public-policy').hidden = false;
       $('hosted-storage-note').hidden = false;
@@ -591,10 +597,14 @@ async function initialize() {
       $('limit-rate-row').hidden = true;
       $('items').placeholder = '1:50 · or 51:100';
       $('connection').lastChild.textContent = 'Public workspace';
+      if (hostedDelivery === 'r2') {
+        $('hosted-storage-note').textContent = 'Available through a private temporary link. The host processes the file, then publishes it for browser download. Waiting for cloud capacity does not reduce the 1-hour ready period.';
+        $('remote-note').textContent = 'Processed by the host, then published through a private temporary download link.';
+      }
     }
     $('remote-note').hidden = !data.remote;
     $('remote-folder-note').hidden = !data.remote || hosted;
-    $('output').value = data.config.output_root;
+    $('output').value = hosted ? translateText(hostedDelivery === 'r2' ? 'Temporary processing + private cloud delivery' : data.config.output_root, locale) : data.config.output_root;
     $('quality').value = data.config.quality;
     if ([...$('sub-langs').options].some((option) => option.value === data.config.sub_langs)) $('sub-langs').value = data.config.sub_langs;
     else { $('sub-langs').value = 'custom'; $('custom-language').value = data.config.sub_langs; }
@@ -625,6 +635,7 @@ function updateAppearance() {
   $('theme-toggle').firstElementChild.textContent = dark ? '☼' : '◐';
   document.querySelector('meta[name="theme-color"]').content = dark ? '#171b17' : '#e7e0d1';
   document.querySelectorAll('[data-language]').forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.language === locale)));
+  if (hosted && currentEnvironment) $('output').value = translateText(hostedDelivery === 'r2' ? 'Temporary processing + private cloud delivery' : 'Temporary server storage', locale);
   translatePage();
 }
 

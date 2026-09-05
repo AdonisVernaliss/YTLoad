@@ -1,0 +1,57 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ytload-media",
+  "main": "src/index.mjs",
+  "compatibility_date": "2026-09-01",
+  "workers_dev": false,
+  "routes": [
+    {
+      "pattern": "downloads.example.com/ytload/media/*",
+      "zone_name": "example.com"
+    },
+    {
+      "pattern": "downloads.example.com/ytload/media-control/*",
+      "zone_name": "example.com"
+    }
+  ],
+  "ratelimits": [
+    {
+      "name": "MEDIA_RATE_LIMITER",
+      "namespace_id": "1001",
+      "simple": {
+        "limit": 30,
+        "period": 60
+      }
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "MEDIA_BUCKET",
+      "bucket_name": "ytload-media"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "CAPACITY_LEDGER",
+        "class_name": "CapacityLedger"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["CapacityLedger"]
+    }
+  ],
+  "triggers": {
+    "crons": ["*/15 * * * *"]
+  },
+  "vars": {
+    "R2_HARD_CAP_BYTES": "8000000000",
+    "RESULT_TTL_SECONDS": "3600",
+    "RECONCILE_MAX_AGE_SECONDS": "1800",
+    "ACTIVE_UPLOAD_STALE_SECONDS": "3600",
+    "ORPHAN_GRACE_SECONDS": "1800"
+  }
+}

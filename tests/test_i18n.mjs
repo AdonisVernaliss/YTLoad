@@ -25,6 +25,9 @@ test('dynamic download status and limits are localized', () => {
   assert.equal(translateText('Public limit exceeded', 'ru'), 'Превышен публичный лимит');
   assert.equal(translateText('Temporary file expired. Run the download again.', 'de'), 'Temporäre Datei abgelaufen. Starten Sie den Download erneut.');
   assert.equal(translateText('Open direct source', 'ru'), 'Открыть напрямую');
+  assert.equal(translateText('Waiting for delivery', 'de'), 'Wartet auf Bereitstellung');
+  assert.equal(translateText('Temporary processing + private cloud delivery', 'ru'), 'Временная обработка + приватная облачная выдача');
+  assert.equal(translateText('Available through a private temporary link. The host processes the file, then publishes it for browser download. Waiting for cloud capacity does not reduce the 1-hour ready period.', 'de'), 'Über einen privaten temporären Link verfügbar. Der Host verarbeitet die Datei und stellt sie anschließend zum Browser-Download bereit. Die Wartezeit auf Cloud-Kapazität verkürzt die einstündige Verfügbarkeit nicht.');
 });
 
 test('filenames, language codes and unknown content remain intact', () => {

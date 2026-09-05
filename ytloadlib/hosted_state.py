@@ -14,6 +14,7 @@ from urllib.parse import parse_qs, unquote, urlsplit
 
 from .jobs import JobManager
 from .models import AppConfig
+from .r2_delivery import delivery_from_environment
 from .public_policy import (PUBLIC_COLLECTION_ITEMS, PUBLIC_CRITICAL_FREE_BYTES, PUBLIC_EXPIRED_ERROR,
                             PUBLIC_FILE_BYTES, PUBLIC_FILE_LIMIT_ERROR, PUBLIC_GLOBAL_QUEUE,
                             PUBLIC_JOB_MAX_SECONDS, PUBLIC_RESULT_TTL, PUBLIC_SESSION_BYTES,
@@ -30,6 +31,8 @@ FILE_BYTES = PUBLIC_FILE_BYTES
 SESSION_TTL = PUBLIC_SESSION_TTL
 SESSION_BYTES = PUBLIC_SESSION_BYTES
 TOTAL_BYTES = PUBLIC_TOTAL_BYTES
+_AUTO_DELIVERY = object()
+_DELIVERY_ACTIVE = {'waiting_delivery', 'uploading', 'cancelling', 'expiring'}
 
 
 def public_url(value: str) -> str:
@@ -98,37 +101,59 @@ class PublicSession:
     abandoned: bool = False
 
 
+def lock_storage(handle):
+    try:
+        if os.name == 'nt':
+            import msvcrt
+            handle.seek(0)
+            if not handle.read(1):
+                handle.write(b'0')
+                handle.flush()
+            handle.seek(0)
+            msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+        else:
+            import fcntl
+            fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError as exc:
+        raise ValueError('Another public backend is using this storage directory.') from exc
+
+
 class PublicState:
-    def __init__(self, root: Path):
+    def __init__(self, root: Path, delivery=_AUTO_DELIVERY):
         self.root = root.expanduser().resolve()
         self.root.mkdir(parents=True, exist_ok=True, mode=0o700)
         marker = self.root / '.ytload-public'
         if any(self.root.iterdir()) and not marker.is_file():
             raise ValueError('Choose an empty directory dedicated to public temporary downloads.')
-        if os.name != 'posix':
-            raise ValueError('The hosted backend requires Linux or macOS. Local mode also supports Windows.')
-        import fcntl
         self.storage_lock = marker.open('a+b')
         try:
-            fcntl.flock(self.storage_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except OSError as exc:
+            lock_storage(self.storage_lock)
+        except Exception:
             self.storage_lock.close()
-            raise ValueError('Another public backend is using this storage directory.') from exc
+            raise
         marker.chmod(0o600)
-        for path in self.root.iterdir():
-            if re.fullmatch(r'[a-f0-9]{32}', path.name) and path.is_dir() and not path.is_symlink():
-                shutil.rmtree(path)
-        self.lock = threading.RLock()
-        self.sessions = {}
-        self.creations = {}
-        self.salt = secrets.token_bytes(32)
-        self.reasons = {}
-        self.purge = set()
-        self.jobs = JobManager(AppConfig(output_root=str(self.root)), prepare_request=protect_command, check_file=check_public_file,
-                               hosted=True, before_job=self._before_job, isolated_storage=True)
-        self.closed = threading.Event()
-        self.monitor = threading.Thread(target=self._monitor, daemon=True, name='temporary-storage')
-        self.monitor.start()
+        self.delivery = None
+        try:
+            for path in self.root.iterdir():
+                if re.fullmatch(r'[a-f0-9]{32}', path.name) and path.is_dir() and not path.is_symlink():
+                    shutil.rmtree(path)
+            self.lock = threading.RLock()
+            self.sessions = {}
+            self.creations = {}
+            self.salt = secrets.token_bytes(32)
+            self.reasons = {}
+            self.purge = set()
+            self.closed = threading.Event()
+            self.delivery = delivery_from_environment(self.root) if delivery is _AUTO_DELIVERY else delivery
+            self.jobs = JobManager(AppConfig(output_root=str(self.root)), prepare_request=protect_command, check_file=check_public_file,
+                                   hosted=True, before_job=self._before_job, isolated_storage=True)
+            self.monitor = threading.Thread(target=self._monitor, daemon=True, name='temporary-storage')
+            self.monitor.start()
+        except Exception:
+            if self.delivery:
+                self.delivery.close()
+            self.storage_lock.close()
+            raise
 
     def new_session(self, client: str) -> PublicSession:
         now = time.monotonic()
@@ -172,12 +197,19 @@ class PublicState:
         if request.mode in {'video', 'audio'} and shutil.disk_usage(self.root).free < PUBLIC_START_FREE_BYTES:
             raise ValueError('At least 12 GB of free disk space is required to start a public media download.')
 
+    def _delivery_record(self, identifier):
+        return self.delivery.snapshot(identifier) if self.delivery else None
+
+    def _job_active(self, job):
+        record = self._delivery_record(job['id'])
+        return job['status'] in ACTIVE or bool(record and record['status'] in _DELIVERY_ACTIVE)
+
     def _quota(self, session, request=None):
         jobs = self.jobs.snapshot()
-        if sum(job['status'] in ACTIVE for job in jobs) >= PUBLIC_GLOBAL_QUEUE:
+        if sum(self._job_active(job) for job in jobs) >= PUBLIC_GLOBAL_QUEUE:
             raise ValueError('The public queue is full. Please wait for a download to finish.')
-        if sum(job['id'] in session.jobs and job['status'] in ACTIVE for job in jobs) >= PUBLIC_SESSION_QUEUE:
-            raise ValueError('You can have up to 4 queued or running public downloads.')
+        if sum(job['id'] in session.jobs and self._job_active(job) for job in jobs) >= PUBLIC_SESSION_QUEUE:
+            raise ValueError('You can have up to 4 queued, processing or publishing public downloads.')
         now = time.monotonic()
         while session.submissions and now - session.submissions[0] >= 60:
             session.submissions.popleft()
@@ -200,7 +232,7 @@ class PublicState:
             self._require_active(session)
             self._quota(session, request)
             jobs = self.jobs.snapshot()
-            if sum(job['id'] in session.jobs and job['status'] in ACTIVE for job in jobs) + len(expanded) > PUBLIC_SESSION_QUEUE or sum(job['status'] in ACTIVE for job in jobs) + len(expanded) > PUBLIC_GLOBAL_QUEUE:
+            if sum(job['id'] in session.jobs and self._job_active(job) for job in jobs) + len(expanded) > PUBLIC_SESSION_QUEUE or sum(self._job_active(job) for job in jobs) + len(expanded) > PUBLIC_GLOBAL_QUEUE:
                 raise ValueError('There is not enough space in the public queue for this batch.')
             values = asdict(request)
             for key in ('passthrough', 'dry_run', 'print_command'):
@@ -221,14 +253,26 @@ class PublicState:
         with self.lock:
             self.owned(session, identifier)
             self._quota(session)
-            ids = self.jobs.retry(identifier)
+            record = self._delivery_record(identifier)
+            ids = self.delivery.retry(identifier) if record and record['status'] in {'failed', 'cancelled'} else self.jobs.retry(identifier)
             session.jobs.update(ids)
             session.submissions.append(time.monotonic())
             return ids
 
+    def cancel(self, session, identifier):
+        with self.lock:
+            self.owned(session, identifier)
+            record = self._delivery_record(identifier)
+            if record and record['status'] not in {'failed', 'cancelled', 'expired'}:
+                self.delivery.cancel(identifier)
+            else:
+                self.jobs.cancel(identifier)
+
     def begin_file(self, session, identifier, index):
         with self.lock:
             self.owned(session, identifier)
+            if self.delivery:
+                raise LookupError('Hosted files use cloud delivery.')
             path = self.jobs.file_path(identifier, index)
             check_public_file(path)
             session.readers[identifier] = session.readers.get(identifier, 0) + 1
@@ -249,7 +293,28 @@ class PublicState:
             for job in self.jobs.snapshot():
                 if job['id'] not in session.jobs:
                     continue
-                job['files'] = [Path(value).name for value in job['files']]
+                local_files = [Path(value).name for value in job['files']]
+                job['files'] = local_files
+                job['file_urls'] = []
+                record = self._delivery_record(job['id'])
+                if record:
+                    job['delivery_status'] = record['status']
+                    job['delivery_ready_at'] = record.get('ready_at')
+                    job['delivery_expires_at'] = record.get('expires_at')
+                    if record['status'] == 'ready':
+                        job['status'] = 'ready'
+                        job['files'] = [value['name'] for value in record['files']]
+                        job['file_urls'] = [value['url'] for value in record['files']]
+                    elif record['status'] in _DELIVERY_ACTIVE:
+                        job['status'] = record['status']
+                        job['files'] = []
+                    elif record['status'] == 'failed':
+                        job['status'] = 'failed'
+                        job['files'] = []
+                        job['error'] = record.get('error') or 'Hosted delivery failed.'
+                    elif record['status'] == 'cancelled':
+                        job['status'] = 'cancelled'
+                        job['files'] = []
                 job['output_root'] = 'Temporary server storage'
                 if job['id'] in self.reasons:
                     job['warnings'].append(self.reasons[job['id']])
@@ -277,6 +342,10 @@ class PublicState:
             monotonic_now = time.monotonic()
             wall_now = time.time()
             jobs = self.jobs.snapshot()
+            if self.delivery:
+                for job in jobs:
+                    if job['status'] == 'completed' and not job['result_expired'] and job['files'] and not self._delivery_record(job['id']):
+                        self.delivery.submit(job['id'], job['files'])
             indexed = {job['id']: job for job in jobs}
             for session in self.sessions.values():
                 if not session.abandoned and monotonic_now - session.touched >= SESSION_TTL and not session.readers:
@@ -288,6 +357,9 @@ class PublicState:
                         job = indexed.get(job_id)
                         if job and job['status'] in ACTIVE:
                             self.jobs.cancel(job_id)
+                        record = self._delivery_record(job_id)
+                        if record and record['status'] not in {'cancelled', 'expired'}:
+                            self.delivery.cancel(job_id)
             jobs = self.jobs.snapshot()
             total = self.storage_size(self.root)
             low_disk = shutil.disk_usage(self.root).free < PUBLIC_CRITICAL_FREE_BYTES
@@ -297,6 +369,11 @@ class PublicState:
                 for job in jobs:
                     if job['id'] not in session.jobs:
                         continue
+                    record = self._delivery_record(job['id'])
+                    if job.get('result_expired') and record and record['status'] == 'expired':
+                        self.delivery.discard(job['id'])
+                        record = None
+                    delivery_active = bool(record and record['status'] in _DELIVERY_ACTIVE)
                     if job['status'] in ACTIVE:
                         runtime = job.get('started_at') and wall_now - job['started_at'] >= PUBLIC_JOB_MAX_SECONDS
                         if session.abandoned or over_storage or low_disk or runtime:
@@ -307,14 +384,30 @@ class PublicState:
                             if session.abandoned or over_storage or low_disk:
                                 self.purge.add(job['id'])
                             self.jobs.cancel(job['id'])
+                    elif delivery_active and (session.abandoned or over_storage or low_disk):
+                        self.reasons[job['id']] = PUBLIC_EXPIRED_ERROR if session.abandoned else 'A public storage safety limit was reached. Use YTLoad Local for larger downloads.'
+                        self.purge.add(job['id'])
+                        self.delivery.cancel(job['id'])
                     elif job['status'] in {'completed', 'failed', 'cancelled'} and not session.readers.get(job['id']):
-                        expired = job.get('finished_at') and wall_now - job['finished_at'] >= PUBLIC_RESULT_TTL
+                        if record and record['status'] in _DELIVERY_ACTIVE:
+                            expired = False
+                        elif record and record['status'] == 'ready':
+                            expired = bool(record.get('expires_at') and wall_now >= record['expires_at'])
+                        elif record:
+                            terminal_at = record.get('terminal_at')
+                            expired = bool(terminal_at and wall_now - terminal_at >= PUBLIC_RESULT_TTL)
+                        else:
+                            expired = bool(job.get('finished_at') and wall_now - job['finished_at'] >= PUBLIC_RESULT_TTL)
                         if job['id'] in self.purge or expired:
+                            if record and record.get('uses_local_files'):
+                                continue
+                            if record:
+                                self.delivery.expire(job['id'])
                             reason = self.reasons.get(job['id'], PUBLIC_EXPIRED_ERROR) if job['id'] in self.purge else PUBLIC_EXPIRED_ERROR
                             self.jobs.expire(job['id'], reason)
                             self.purge.discard(job['id'])
             jobs = self.jobs.snapshot()
-            active = {job['id'] for job in jobs if job['status'] in ACTIVE}
+            active = {job['id'] for job in jobs if self._job_active(job)}
             for identifier, session in list(self.sessions.items()):
                 if not session.abandoned or session.readers or session.jobs.intersection(active):
                     continue
@@ -325,6 +418,8 @@ class PublicState:
                 if session.root.exists():
                     shutil.rmtree(session.root, ignore_errors=False)
                 del self.sessions[identifier]
+            if self.delivery:
+                self.delivery.discard_expired()
             known = {job['id'] for job in self.jobs.snapshot()}
             self.reasons = {key: value for key, value in self.reasons.items() if key in known}
             self.purge.intersection_update(known)
@@ -342,4 +437,6 @@ class PublicState:
         self.closed.set()
         self.monitor.join(timeout=4)
         self.jobs.close()
+        if self.delivery:
+            self.delivery.close()
         self.storage_lock.close()

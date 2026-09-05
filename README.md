@@ -16,10 +16,10 @@ A local web workspace, an isolated hosted mode and an English command-line tool 
 - **A clear web interface:** dark and light themes, EN/DE/RU translations, responsive layouts and a live download queue.
 - **Terminal workflows:** an interactive English wizard, direct commands, URL lists, playlists and channel sections.
 - **Recoverable downloads:** cancellation, retry, partial-file resuming and separate download records for different settings.
-- **Hosted mode:** separate visitor sessions, temporary files and explicit download limits behind an HTTPS proxy.
+- **Hosted mode:** separate visitor sessions, guarded temporary storage and optional private R2 delivery for large browser downloads.
 - **Local operation:** files stay on the host computer; phone access is available on a trusted local network.
 
-The application uses Python's standard library, with no frontend build step or application account. Downloading still requires internet access to the source and any optional services you enable.
+The core application uses Python's standard library, with no frontend build step or application account. Guarded R2 delivery is an optional Hosted-only integration and uses boto3. Downloading still requires internet access to the source and any optional services you enable.
 
 ## Quick start
 
@@ -448,10 +448,10 @@ Responsive layouts have been checked at widths from 320 to 1920 pixels. Cross-IP
 
 ## Hosted mode
 
-YTLoad includes a separate public backend for Linux and macOS with three ordered paths:
+YTLoad includes a separate public backend for macOS, Linux and Windows with three ordered paths:
 
 1. **Direct Web, when available.** Check link may expose one safe HTTPS progressive source containing both video and audio. The visitor opens it through native browser navigation, so media does not use YTLoad server bandwidth. Browser saving is best-effort and is never presented as guaranteed.
-2. **Public Hosted Web.** yt-dlp downloads on the host and FFmpeg merges or remuxes when required. The final media file has a hard 5 GiB limit.
+2. **Public Hosted Web.** yt-dlp downloads on the processing host and FFmpeg merges or remuxes when required. The final media file has a hard 5 GiB limit. Production deployments can publish the completed result to private R2 so the final file never crosses the control Tunnel.
 3. **YTLoad Local.** Local Web and CLI remain unrestricted by the public 5 GiB policy and support browser sign-in, advanced options and larger work.
 
 Public sessions keep separate queue views, CSRF tokens, files and temporary storage. Hosted mode accepts direct YouTube video, playlist and channel links. Other supported sites, local destinations, browser cookies, comments and SponsorBlock remain available in local mode.
@@ -459,19 +459,23 @@ Public sessions keep separate queue views, CSRF tokens, files and temporary stor
 | Limit | Public backend |
 | --- | --- |
 | Links per batch | 3 |
-| Queue | 4 queued or running jobs per session, 12 globally; exactly one yt-dlp/FFmpeg job runs at a time |
+| Queue | 4 queued, processing or publishing jobs per session, 12 globally |
+| Workers | Exactly one yt-dlp/FFmpeg worker and, when enabled, one separate R2 uploader |
 | Collection items | 50 per section; use `51:100` for the next batch |
 | Final media file | 5 GiB per result; smaller user limits are accepted |
 | Temporary storage | 12 GiB per session, 20 GiB globally |
-| Job runtime | 3 hours after execution starts |
-| Result retention | About 1 hour after completion, failure or cancellation, independent of page polling |
+| Job runtime | 3 hours after processing starts |
+| Result retention | About 1 hour after successful R2 publication; waiting does not consume it |
+| R2 application cap | 8,000,000,000 bytes across ready objects and full active reservations |
 | Disk reserve | About 12 GiB required before a media job; running work stops near 4 GiB free |
 
 The public backend does not apply an artificial default download-speed limit. Storage, time and disk checks are application safeguards, not filesystem quotas. Run the backend as a dedicated unprivileged user, give it a separate storage volume with an operating-system quota, and apply CPU and memory limits through the process supervisor.
 
-Completed, failed and cancelled job data is isolated so expired temporary files can be removed without affecting another job. An active HTTP file reader postpones expiry until its response finishes. Public file responses stream bounded chunks and support byte ranges for interrupted-download resume. A storage-triggered cancellation removes its temporary job data; ordinary failed and cancelled partials remain retryable until expiry.
+Without R2 configuration, completed files retain the legacy local streaming behavior with bounded chunks and byte-range resume. With all R2 variables configured, completed files are never served by the backend. They move through an explicit `waiting_delivery -> uploading -> ready` phase and receive a short-lived `/ytload/media/<ticket>` link from the Media Worker. The link supports native browser download, `HEAD`, single `Range`, `206` and `416` without buffering the file in Worker memory.
 
-The queue is kept in memory. Restarting clears sessions and removes earlier temporary session directories when the backend starts. A storage lock prevents two backend instances from using the same directory. Do not share storage between replicas or expect jobs to survive restarts.
+Completed, failed and cancelled job data remains isolated so expiry cannot remove another job's shared retry root. A storage-triggered cancellation removes its temporary job data; ordinary failed and cancelled partials remain retryable until expiry. R2 upload cancellation aborts multipart work and retains its full ledger reservation until Cloudflare-side cleanup is confirmed. Ambiguous multipart state never ages out of the ledger; a complete processing-host startup recovery pass is required before that capacity is released.
+
+The queue is kept in memory. Restarting clears sessions and removes earlier temporary session directories when the backend starts. A cross-platform storage lock prevents two backend instances from using the same directory. R2-ready objects and tickets remain Cloudflare-side when the processing host is offline; queued and processing jobs do not survive a restart.
 
 ### Run behind an HTTPS reverse proxy
 
@@ -486,7 +490,7 @@ python3 ytload.py --serve \
   --port 8765
 ```
 
-The HTTPS proxy must forward `/ytload/` and its subpaths to `http://127.0.0.1:8765`, preserve the path, stream long responses and support multi-gigabyte bodies and byte ranges. Set these headers at the proxy, replacing any client-supplied values:
+The HTTPS proxy must forward the static interface and lightweight `/ytload/api/*` control calls to `http://127.0.0.1:8765`, preserving the path. Set these headers at the proxy, replacing any client-supplied values:
 
 | Header | Value |
 | --- | --- |
@@ -497,7 +501,22 @@ The HTTPS proxy must forward `/ytload/` and its subpaths to `http://127.0.0.1:87
 
 Keep the backend bound to loopback or a private container network. Configure HTTPS, request-rate and connection limits at the proxy. Restrict backend egress to public destinations, including redirects and DNS changes. Do not mount browser profiles, home directories or credentials into its runtime. The public API has no cookie-upload or browser-sign-in endpoint.
 
-Application support for 5 GiB files does not prove that a deployed proxy path permits them. A production release requires an origin/reverse-proxy path whose provider terms and technical limits allow long multi-gigabyte streaming responses and Range resume. A Cloudflare Worker media proxy, Worker-to-R2 pipeline and R2 media staging are not part of this architecture. Do not advertise the 5 GiB hosted path as production-ready until that transport gate is verified.
+Legacy Hosted mode sends `/api/files/*` through that proxy and therefore depends on the proxy's response limits. The production large-file path uses the optional private R2 integration instead:
+
+```text
+home backend -> R2 S3 multipart upload
+browser -> Media Worker route -> private R2 binding
+```
+
+The reusable Worker, guarded capacity ledger, sample Wrangler configuration and full setup procedure are in [Guarded R2 hosted delivery](docs/hosted-r2.md). The deployment uses R2 Standard, a dedicated private bucket, scoped credentials, a 15-minute cleanup Cron and a one-day emergency lifecycle. The Media Worker routes must be more specific than the site or control-proxy route.
+
+Install the optional uploader only on the Hosted processing host:
+
+```bash
+python3 -m pip install -r requirements-hosted-r2.txt
+```
+
+Copy `.env.example` values into the host's protected service environment. YTLoad intentionally does not read `.env` files. A partial R2 configuration stops startup; an entirely absent R2 configuration leaves Local, CLI and legacy Hosted behavior unchanged.
 
 ### Dependency updates
 
@@ -523,6 +542,8 @@ Tests cover request validation, command construction, caption conversion, proces
 | `ytload.py` | Application entrypoint |
 | `ytloadlib/` | CLI, validation, download execution, transcript conversion and web backends |
 | `ytloadlib/static/` | Web interface, styles and translations |
+| `ytloadlib/r2_delivery.py` | Optional Hosted R2 uploader and signed control client |
+| `cloudflare/media-worker/` | Private R2 delivery Worker and guarded capacity ledger |
 | `tests/` | Python and JavaScript checks |
 | `build.py` | Reproducible portable archive builder |
 

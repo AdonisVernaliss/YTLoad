@@ -145,6 +145,7 @@ class PublicHandler(WorkspaceHandler):
                         value['path'] = None
                 config = asdict(AppConfig(output_root='Temporary server storage'))
                 self._send(200, {'config': config, 'environment': environment, 'version': __version__, 'platform': 'server', 'remote': True, 'hosted': True,
+                                 'delivery': 'r2' if self.server.state.delivery else 'local',
                                  'public_policy': {'file_bytes': PUBLIC_FILE_BYTES, 'session_bytes': PUBLIC_SESSION_BYTES,
                                                    'total_bytes': PUBLIC_TOTAL_BYTES, 'job_max_seconds': PUBLIC_JOB_MAX_SECONDS,
                                                    'result_ttl_seconds': PUBLIC_RESULT_TTL}})
@@ -248,7 +249,7 @@ class PublicHandler(WorkspaceHandler):
                         raise ValueError('Choose a download.')
                     state.owned(session, identifier)
                     if match[1] == 'cancel':
-                        state.jobs.cancel(identifier)
+                        state.cancel(session, identifier)
                         self._send(200, {'ok': True})
                     else:
                         self._send(202, {'ids': state.retry(session, identifier)})

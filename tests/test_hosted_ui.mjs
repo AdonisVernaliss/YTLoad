@@ -36,6 +36,8 @@ test('public interface contains production limits without client media fetch or 
   assert.match(html, /5 GB maximum final file/);
   assert.match(html, /12 GB temporary session capacity/);
   assert.match(html, /files expire about 1 hour/);
+  assert.match(app, /job\.file_urls\?\.\[index\]/);
+  assert.match(app, /hostedDelivery === 'r2'/);
   assert.doesNotMatch(app, /fetch\([^\n]*direct/i);
   assert.doesNotMatch(app, /ffmpeg\.wasm|OPFS/i);
 });

@@ -89,4 +89,8 @@ secrets*
 
 public-storage/
 .ytload-public
+.ytload-r2-delivery.json
+cloudflare/media-worker/wrangler.jsonc
+cloudflare/media-worker/.dev.vars*
+cloudflare/media-worker/.wrangler/
 *.local.csv
