@@ -85,6 +85,18 @@ class HostedServerTests(unittest.TestCase):
         connection.close()
         return result
 
+    def assert_readers_released(self, session, timeout=2):
+        deadline = time.monotonic() + timeout
+        while True:
+            with self.server.state.lock:
+                readers = dict(session.readers)
+            if not readers:
+                return
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                self.fail(f'file readers were not released: {readers}')
+            threading.Event().wait(min(.001, remaining))
+
     def session(self):
         import re
         status, headers, body = self.request('GET', '/ytload/')
@@ -137,6 +149,7 @@ class HostedServerTests(unittest.TestCase):
         from ytloadlib.runner import DownloadRunResult
         first, first_token = self.session()
         second, second_token = self.session()
+        first_session = next(iter(self.server.state.sessions.values()))
         def download(request, url, config, **kwargs):
             path = Path(request.output_root) / 'sample.mp4'
             path.write_bytes(b'0123456789')
@@ -157,6 +170,9 @@ class HostedServerTests(unittest.TestCase):
         for action in ['cancel', 'retry']:
             self.assertEqual(self.request('POST', f'/ytload/api/{action}', {'id': identifier}, second, second_token)[0], 404)
         path = f'/ytload/api/files/{identifier}/0?token={first_token}'
+        status, _, body = self.request('GET', path, cookie=first)
+        self.assertEqual((status, body), (200, b'0123456789'))
+        self.assert_readers_released(first_session)
         status, headers, body = self.request('GET', path, cookie=first, Range='bytes=2-5')
         self.assertEqual((status, body), (206, b'2345'))
         self.assertEqual(headers['Content-Range'], 'bytes 2-5/10')
@@ -164,8 +180,9 @@ class HostedServerTests(unittest.TestCase):
         self.assertEqual(headers['Accept-Ranges'], 'bytes')
         self.assertEqual(headers['Cache-Control'], 'private, no-store')
         self.assertIn('attachment;', headers['Content-Disposition'])
+        self.assert_readers_released(first_session)
         self.assertEqual(self.request('GET', path, cookie=first, Range='bytes=99-')[0], 416)
-        self.assertEqual(next(iter(self.server.state.sessions.values())).readers, {})
+        self.assert_readers_released(first_session)
         self.server.state.jobs.expire(identifier, 'expired')
         self.assertEqual(self.request('GET', path, cookie=first)[0], 404)
         expired = json.loads(self.request('GET', '/ytload/api/jobs', cookie=first, token=first_token)[2])[0]
