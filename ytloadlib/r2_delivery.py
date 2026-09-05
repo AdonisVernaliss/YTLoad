@@ -153,6 +153,7 @@ class MediaControlClient:
         request = Request(self.url + '/' + action, data=body, method='POST', headers={
             'Authorization': 'YTLoad-HMAC ' + encoded,
             'Content-Type': 'application/json',
+            'User-Agent': 'YTLoad-Media-Control/1',
             'X-YTLoad-Nonce': nonce,
             'X-YTLoad-Timestamp': timestamp,
         })

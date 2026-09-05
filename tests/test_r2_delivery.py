@@ -3,6 +3,7 @@ import tempfile
 import threading
 import time
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 
@@ -95,6 +96,26 @@ class DeliveryConfigurationTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(ValueError, 'incomplete'):
             R2DeliveryConfig.from_environ({name: ' ' for name in names})
+
+
+class MediaControlClientTests(unittest.TestCase):
+    def test_control_requests_use_stable_user_agent(self):
+        from ytloadlib.r2_delivery import MediaControlClient
+
+        class Response:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return False
+
+            def read(self, limit):
+                return b'{"ok":true}'
+
+        with patch('ytloadlib.r2_delivery.urlopen', return_value=Response()) as opened:
+            self.assertEqual(MediaControlClient('https://example.com/ytload/media-control', 's' * 32).reconcile(), {'ok': True})
+        request = opened.call_args.args[0]
+        self.assertEqual(request.get_header('User-agent'), 'YTLoad-Media-Control/1')
 
 
 class MultipartTests(unittest.TestCase):
